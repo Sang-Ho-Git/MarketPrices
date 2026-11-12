@@ -96,6 +96,8 @@ def fetch_all(params, max_pages=200):
         rows = rows_of(body)
         total = int(body.get("totalCount") or 0)
         out.extend(rows)
+        if page % 10 == 0:
+            log("    %d쪽까지 받음: %d / %d행" % (page, len(out), total))
         if not rows or len(out) >= total:
             break
     return out, total
@@ -336,8 +338,9 @@ def main():
         up, dn = summarize(market)
         index.append({"id": mid, "name": market["name"], "date": market["date"],
                       "items": len(market["items"]), "up": up, "dn": dn})
-    write_json(os.path.join(DATA, "index.json"),
-               {"generated": now.isoformat(timespec="seconds"), "markets": index})
+        # 시장 하나가 끝날 때마다 저장해서, 중간에 멈춰도 끝낸 시장은 남게 한다.
+        write_json(os.path.join(DATA, "index.json"),
+                   {"generated": now.isoformat(timespec="seconds"), "markets": index})
     log("완료: 시장 %d곳, API 호출 %d회" % (len(index), calls))
     if failed:
         sys.exit(1)
