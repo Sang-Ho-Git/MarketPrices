@@ -5,14 +5,16 @@ GitHub Actions 에서 정해진 시간마다 실행된다. 인증키는 환경�
 표준 라이브러리만 사용한다.
 
 저장하는 파일
-  data/markets_discovered.json    API 에서 확인한 도매시장 코드와 이름 (처음 한 번 만든다)
-  data/daily/<시장id>/<일자>.json  하루치 집계 (지난 날은 다시 받지 않는다)
-  data/<시장id>.json              화면이 읽는 시장별 시세
-  data/index.json                 수집한 시장 목록과 요약
+  data/markets_discovered.json         API 에서 확인한 도매시장 코드와 이름 (처음 한 번 만든다)
+  data/daily/<시장id>/<일자>.json       하루치 품목별 집계 (지난 날은 다시 받지 않는다)
+  data/lots/<시장id>/<일자>/<법인코드>.json  그날 그 법인의 낙찰 내역 전체 (화면에서 누를 때 불러온다)
+  data/<시장id>.json                   화면이 처음 읽는 시장별 시세 (품목, 최근 추세, 날짜별 법인 평균)
+  data/index.json                      수집한 시장 목록과 요약
 """
 import datetime
 import json
 import os
+import shutil
 import sys
 import time
 import urllib.error
@@ -29,7 +31,7 @@ REFRESH_DAYS = 2    # 항상 다시 받을 최근 며칠
 PAGE_SIZE = 1000
 MAX_CALLS = 2500    # 한 번 실행에서 부를 수 있는 최대 횟수
 MAX_ITEMS = 500     # 시장 파일에 담을 최대 품목(규격) 수, 물량 많은 순
-LOTS_PER_CORP = 6   # 품목마다 법인별로 남길 최근 낙찰 건수
+SCHEMA = 3          # 일별 파일 형식 번호. 바뀌면 지난 날도 다시 받는다.
 
 KEY = os.environ.get("DATA_GO_KR_KEY", "").strip()
 calls = 0
@@ -182,6 +184,11 @@ def num(v):
         return 0.0
 
 
+def clean(x):
+    """3.0 -> 3, 2.5 -> 2.5"""
+    return int(x) if x == int(x) else round(x, 1)
+
+
 def unit_label(r):
     uq = num(r.get("unit_qty"))
     un = (r.get("unit_nm") or "").strip()
@@ -190,42 +197,64 @@ def unit_label(r):
     return (head + " " + pk).strip()
 
 
+def item_parts(r):
+    n = (r.get("gds_mclsf_nm") or "").strip()
+    v = (r.get("gds_sclsf_nm") or "").strip()
+    if v == n:
+        v = ""
+    return n, v, unit_label(r)
+
+
+def corp_code(r):
+    return (r.get("corp_cd") or "").strip() or "none"
+
+
 def agg(rows):
-    """한 시장·하루치 행을 품목(규격)별로 묶는다. 가격은 규격 1단위 낙찰가의 물량 가중 평균."""
-    items = {}
+    """한 시장·하루치 행을 품목(규격)별로 묶는다. 가격은 규격 1단위 낙찰가의 물량 가중 평균.
+    돌려주는 값: (품목별 집계, {법인코드: 법인이름})"""
+    items, names = {}, {}
     for r in rows:
         q = num(r.get("qty"))
         p = num(r.get("scsbd_prc"))
-        n = (r.get("gds_mclsf_nm") or "").strip()
+        n, v, u = item_parts(r)
         if q <= 0 or p <= 0 or not n:
             continue
-        v = (r.get("gds_sclsf_nm") or "").strip()
-        if v == n:
-            v = ""
-        u = unit_label(r)
         it = items.setdefault("|".join([n, v, u]), {
             "n": n, "v": v, "u": u, "c": (r.get("gds_lclsf_nm") or "").strip() or "기타",
-            "sp": 0.0, "q": 0.0, "hi": p, "lo": p, "corps": {}, "orgs": {}, "lots": {}})
+            "sp": 0.0, "q": 0.0, "corps": {}})
         it["sp"] += p * q
         it["q"] += q
-        it["hi"] = max(it["hi"], p)
-        it["lo"] = min(it["lo"], p)
-        cn = (r.get("corp_nm") or "").strip() or "미상"
-        c = it["corps"].setdefault(cn, [0.0, 0.0])
+        cc = corp_code(r)
+        names.setdefault(cc, (r.get("corp_nm") or "").strip() or cc)
+        c = it["corps"].setdefault(cc, [0.0, 0.0])
         c[0] += p * q
         c[1] += q
+    return items, names
+
+
+def lots_files(rows):
+    """법인별 낙찰 내역 파일 내용을 만든다. {법인코드: 파일내용}
+    rows 의 각 행: [품목번호, 시각, 산지번호, 수량, 낙찰가]. 최근 낙찰이 먼저 오도록 정렬한다."""
+    byc = {}
+    for r in rows:
+        q = num(r.get("qty"))
+        p = num(r.get("scsbd_prc"))
+        n, v, u = item_parts(r)
+        if q <= 0 or p <= 0 or not n:
+            continue
+        d = byc.setdefault(corp_code(r), {"name": (r.get("corp_nm") or "").strip(),
+                                          "items": {}, "origins": {}, "raw": []})
+        ii = d["items"].setdefault("|".join([n, v, u]), len(d["items"]))
         on = (r.get("plor_nm") or "").strip() or "미상"
-        o = it["orgs"].setdefault(on, [0.0, 0.0, p, p])
-        o[0] += p * q
-        o[1] += q
-        o[2] = max(o[2], p)
-        o[3] = min(o[3], p)
-        it["lots"].setdefault(cn, []).append((r.get("scsbd_dt") or "", on, q, p))
-    for it in items.values():
-        for cn, lots in it["lots"].items():
-            lots.sort(key=lambda x: x[0], reverse=True)
-            it["lots"][cn] = [[dt[11:16], o, qq, pp] for dt, o, qq, pp in lots[:LOTS_PER_CORP]]
-    return items
+        oi = d["origins"].setdefault(on, len(d["origins"]))
+        dt = r.get("scsbd_dt") or ""
+        d["raw"].append((dt, [ii, dt[11:19], oi, clean(q), clean(p)]))
+    out = {}
+    for cc, d in byc.items():
+        d["raw"].sort(key=lambda x: x[0], reverse=True)
+        out[cc] = {"corp": d["name"], "items": list(d["items"]), "origins": list(d["origins"]),
+                   "rows": [x[1] for x in d["raw"]]}
+    return out
 
 
 def whole(x):
@@ -237,29 +266,26 @@ def build_market(days_data):
     if not dates:
         return None
     latest = dates[-1]
+    corp_names = {}
+    for d in dates:
+        corp_names.update(days_data[d].get("names") or {})
     out = []
     for key, it in days_data[latest]["items"].items():
-        week, wd = [], []
+        week, wd, cd = [], [], {}
         for d in dates:
             x = days_data[d]["items"].get(key)
             if x and x["q"] > 0:
                 week.append(whole(x["sp"] / x["q"]))
-                wd.append(d[5:])
-        lots = []
-        for cn, ls in it["lots"].items():
-            lots.extend({"t": t, "c": cn, "o": o, "q": whole(q), "p": whole(p)} for t, o, q, p in ls)
-        lots.sort(key=lambda x: x["t"], reverse=True)
-        out.append({
-            "n": it["n"], "v": it["v"], "u": it["u"], "c": it["c"],
-            "week": week, "wdays": wd, "vol": whole(it["q"]),
-            "corps": sorted(({"c": c, "avg": whole(s / q), "q": whole(q)} for c, (s, q) in it["corps"].items()),
-                            key=lambda x: x["q"], reverse=True),
-            "origins": sorted(({"o": o, "avg": whole(s / q), "hi": whole(hi), "lo": whole(lo), "q": whole(q)}
-                               for o, (s, q, hi, lo) in it["orgs"].items()), key=lambda x: x["q"], reverse=True),
-            "lots": lots,
-        })
+                wd.append(d)
+                cd[d] = sorted(([c, whole(s / q), clean(q)] for c, (s, q) in x["corps"].items()),
+                               key=lambda z: z[2], reverse=True)
+        out.append({"n": it["n"], "v": it["v"], "u": it["u"], "c": it["c"],
+                    "week": week, "wdays": wd, "vol": whole(it["q"]), "cd": cd})
     out.sort(key=lambda x: x["vol"], reverse=True)
-    return {"date": latest, "dates": dates, "items": out[:MAX_ITEMS], "total_items": len(out)}
+    out = out[:MAX_ITEMS]
+    used = {z[0] for it in out for lst in it["cd"].values() for z in lst}
+    return {"date": latest, "dates": dates, "corps": {c: n for c, n in corp_names.items() if c in used},
+            "items": out, "total_items": len(days_data[latest]["items"])}
 
 
 def summarize(market):
@@ -279,24 +305,33 @@ def summarize(market):
 def collect_market(m, code, today):
     days_data = {}
     base = os.path.join(DATA, "daily", m["id"])
+    lots_base = os.path.join(DATA, "lots", m["id"])
     for back in range(WINDOW):
         ds = (today - datetime.timedelta(days=back)).isoformat()
         path = os.path.join(base, ds + ".json")
         cached = read_json(path)
-        if cached and cached.get("items") and back >= REFRESH_DAYS:
+        if cached and cached.get("v") == SCHEMA and cached.get("items") and back >= REFRESH_DAYS:
             days_data[ds] = cached
             continue
         rows, total = fetch_all({"cond[whsl_mrkt_cd::EQ]": code, "cond[trd_clcln_ymd::EQ]": ds})
-        day = {"date": ds, "rows": len(rows), "items": agg(rows)}
-        log("  %s %s: 행 %d, 품목 %d" % (m["id"], ds, len(rows), len(day["items"])))
+        items, names = agg(rows)
+        day = {"v": SCHEMA, "date": ds, "rows": len(rows), "names": names, "items": items}
+        files = lots_files(rows)
+        for cc, content in files.items():
+            write_json(os.path.join(lots_base, ds, cc + ".json"), content)
+        log("  %s %s: 행 %d, 품목 %d, 법인 %d" % (m["id"], ds, len(rows), len(items), len(files)))
         write_json(path, day)
         days_data[ds] = day
-    # 오래된 일별 파일 정리
+    # 오래된 파일 정리
+    keep = {(today - datetime.timedelta(days=i)).isoformat() for i in range(WINDOW + 3)}
     if os.path.isdir(base):
-        keep = {(today - datetime.timedelta(days=i)).isoformat() + ".json" for i in range(WINDOW + 3)}
         for f in os.listdir(base):
-            if f not in keep:
+            if f[:-5] not in keep:
                 os.remove(os.path.join(base, f))
+    if os.path.isdir(lots_base):
+        for d in os.listdir(lots_base):
+            if d not in keep:
+                shutil.rmtree(os.path.join(lots_base, d), ignore_errors=True)
     return days_data
 
 
