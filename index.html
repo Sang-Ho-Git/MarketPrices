@@ -54,6 +54,7 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 8px}
 .date{color:var(--muted);font-size:13px}
 .back{display:inline-flex;align-items:center;min-height:44px;color:var(--accent);font-weight:600;font-size:14px;text-decoration:none;margin-top:4px}
 .notice{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:10px 12px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.notice.ok{background:var(--accent-soft);color:var(--accent)}
 .notice b{font-weight:600;white-space:nowrap}
 
 /* 메인 */
@@ -62,6 +63,7 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 8px}
 .mcard .mn{font-family:var(--display);font-size:24px;line-height:1.15}
 .mcard .mr{font-size:12px;color:var(--muted)}
 .mcard .ms{margin-top:auto;font-size:13px;display:flex;gap:10px;padding-top:6px}
+.mcard .ms.off{color:var(--muted)}
 .up-t{color:var(--up);font-weight:600}.down-t{color:var(--down);font-weight:600}
 .pinhint{margin:0;padding:18px 12px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface);border:1px dashed var(--line);border-radius:14px}
 .search{width:100%;margin-bottom:8px}
@@ -80,7 +82,7 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 8px}
 .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
 .tile .k{font-size:12px;color:var(--muted)}
-.tile .v{font-family:var(--display);font-size:22px;line-height:1.2}
+.tile .v{font-family:var(--display);font-size:22px;line-height:1.2;overflow-wrap:anywhere}
 .tile .v.up{color:var(--up)} .tile .v.down{color:var(--down)}
 .tile .s{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 
@@ -109,6 +111,7 @@ select{flex:none}
 .pill.down{color:var(--down);background:var(--down-soft)}
 .pill.flat{color:var(--muted);background:var(--bg)}
 .spark{display:block}
+.more{font:inherit;font-size:14px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--accent);font-weight:600;cursor:pointer}
 
 .detail{border-top:1px solid var(--line);padding:12px 14px 14px;display:flex;flex-direction:column;gap:14px}
 .detail h3{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 6px}
@@ -141,7 +144,7 @@ footer a{color:var(--accent)}
   <section id="home" hidden>
     <header>
       <div class="top"><h1>도매시장 경락가</h1><span class="date num" id="hdate"></span></div>
-      <div class="notice"><b>예시 데이터</b><span>가격과 물량은 화면 확인용으로 만든 숫자입니다. 실제 경매 결과가 아닙니다.</span></div>
+      <div class="notice" id="hnotice"><b id="hnb">예시 데이터</b><span id="hnt">가격과 물량은 화면 확인용으로 만든 숫자입니다. 실제 경매 결과가 아닙니다.</span></div>
     </header>
     <h2>자주 보는 시장</h2>
     <div class="grid" id="pins"></div>
@@ -154,14 +157,14 @@ footer a{color:var(--accent)}
     <header>
       <a class="back" href="#">‹ 시장 선택</a>
       <div class="top"><h1 id="mtitle"></h1><span class="date num" id="date"></span></div>
-      <div class="notice"><b>예시 데이터</b><span>지금 보이는 가격과 물량은 화면 확인용으로 만든 숫자입니다. 실제 경매 결과가 아닙니다.</span></div>
+      <div class="notice" id="mnotice"><b id="mnb">예시 데이터</b><span id="mnt">지금 보이는 가격과 물량은 화면 확인용으로 만든 숫자입니다. 실제 경매 결과가 아닙니다.</span></div>
     </header>
 
     <section class="summary" id="summary" aria-label="오늘 요약"></section>
 
     <div class="controls">
       <div class="row">
-        <input type="search" id="q" placeholder="품목 검색 (예: 배추, 고추)" aria-label="품목 검색" autocomplete="off">
+        <input type="search" id="q" placeholder="품목 검색 (예: 배추, 고구마)" aria-label="품목 검색" autocomplete="off">
         <select id="sort" aria-label="정렬">
           <option value="name">이름순</option>
           <option value="up">많이 오른 순</option>
@@ -176,8 +179,8 @@ footer a{color:var(--accent)}
   </section>
 
   <footer>
-    <span>가격은 상품(上) 등급 평균 경락가, 등락은 직전 경매일 대비입니다.</span>
-    <span>실제 데이터 출처(연결 예정): <a href="https://www.data.go.kr/data/15141808/openapi.do">공공데이터포털 전국 공영도매시장 실시간 경매정보</a></span>
+    <span id="fnote">가격은 상품(上) 등급 평균 경락가, 등락은 직전 경매일 대비입니다.</span>
+    <span>데이터 출처: <a href="https://www.data.go.kr/data/15141808/openapi.do">공공데이터포털 전국 공영도매시장 실시간 경매정보</a></span>
   </footer>
 </div>
 
@@ -185,7 +188,7 @@ footer a{color:var(--accent)}
 (function(){
 "use strict";
 
-/* ---------- 시장 목록 (자주 쓰는 순서가 아니라 지역별) ---------- */
+/* ---------- 시장 목록 (지역별) ---------- */
 var MARKETS=[
  {id:"garak",n:"가락",r:"서울"},{id:"gangseo",n:"강서",r:"서울"},
  {id:"anyang",n:"안양",r:"경기"},{id:"ansan",n:"안산",r:"경기"},{id:"suwon",n:"수원",r:"경기"},{id:"guri",n:"구리",r:"경기"},
@@ -204,7 +207,7 @@ var MARKETS=[
 var REGIONS=["서울","경기","인천","부산","대구","대전","광주","울산","강원","충북","충남","전북","전남","경북","경남"];
 var DEFAULT_PINS=["garak","anyang","incheon-samsan","gangseo"];
 
-/* ---------- 예시 품목 ---------- */
+/* ---------- 예시 품목 (실제 데이터를 못 불러왔을 때만 사용) ---------- */
 var ITEMS=[
  {n:"배추",v:"가을배추",u:"10kg 망",b:8200,c:"엽채",o:["전남 해남","강원 평창","충남 당진","전북 고창"]},
  {n:"양배추",v:"",u:"8kg 망",b:7400,c:"엽채",o:["제주","전남 무안","충남 서산"]},
@@ -252,7 +255,7 @@ function hashStr(s){var h=7;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|
 function round(v,step){return Math.round(v/step)*step;}
 function step(b){return b>=50000?500:b>=5000?100:10;}
 
-// 최근 7개 경매일 (일요일 제외)
+// 예시용: 최근 7개 경매일 (일요일 제외)
 var days=[],d=new Date();
 while(days.length<7){ if(d.getDay()!==0) days.unshift(new Date(d)); d.setDate(d.getDate()-1); }
 var dayKey=days[6].getFullYear()*10000+(days[6].getMonth()+1)*100+days[6].getDate();
@@ -283,7 +286,7 @@ function build(m){
         q:Math.round(8+r()*140),p:round(today*g[1]*(0.9+r()*0.2),s)});
     }
     lots.sort(function(a,b){return b.t-a.t;});
-    return {id:"i"+i,n:it.n,v:it.v,u:it.u,c:it.c,week:week,today:today,prev:prev,
+    return {id:"s"+i,n:it.n,v:it.v,u:it.u,c:it.c,week:week,wdays:null,today:today,prev:prev,
       pct:(today-prev)/prev*100,diff:today-prev,vol:vol,grades:grades,corps:corps,lots:lots};
   });
   cache[m.id]=out;
@@ -291,11 +294,11 @@ function build(m){
 }
 
 /* ---------- 상태 ---------- */
-var DATA=[],curMarket=null;
-var state={q:"",cat:"전체",sort:"name",open:null,fav:{},corp:{}};
+var DATA=[],curMarket=null,token=0,SHOW=100;
+var state={q:"",cat:"전체",sort:"name",open:null,fav:{},corp:{},limit:SHOW};
 function load(key,fallback){try{var v=JSON.parse(localStorage.getItem(key));return v==null?fallback:v;}catch(e){return fallback;}}
 function save(key,v){try{localStorage.setItem(key,JSON.stringify(v));}catch(e){}}
-var favRaw=load("garak-fav",{});if(favRaw&&typeof favRaw==="object")state.fav=favRaw;
+var favRaw=load("garak-fav",{});if(favRaw&&typeof favRaw==="object"&&!Array.isArray(favRaw))state.fav=favRaw;
 var pins=load("garak-pins",DEFAULT_PINS);if(!Array.isArray(pins))pins=DEFAULT_PINS.slice();
 var msearch="";
 
@@ -304,27 +307,68 @@ var won=function(v){return v.toLocaleString("ko-KR");};
 function dir(p){return p>0.05?"up":p<-0.05?"down":"flat";}
 function pctText(p){var k=dir(p);return (k==="up"?"▲ ":k==="down"?"▼ ":"– ")+Math.abs(p).toFixed(1)+"%";}
 function fmtDay(x){return (x.getMonth()+1)+"/"+x.getDate();}
-function fmtTime(m){m=m%1440;var h=Math.floor(m/60),mm=m%60;return (h<10?"0":"")+h+":"+(mm<10?"0":"")+mm;}
+function fmtTime(m){if(typeof m==="string")return m;m=m%1440;var h=Math.floor(m/60),mm=m%60;return (h<10?"0":"")+h+":"+(mm<10?"0":"")+mm;}
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
 var NS="http://www.w3.org/2000/svg";
 function svg(tag,attrs){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
 function find(id){return MARKETS.filter(function(x){return x.id===id;})[0];}
 var W="일월화수목금토",t=days[6];
 var dateText=t.getFullYear()+"."+(t.getMonth()+1)+"."+t.getDate()+" ("+W[t.getDay()]+") 경매분";
+var SAMPLE_NOTE="지금 보이는 가격과 물량은 화면 확인용으로 만든 숫자입니다. 실제 경매 결과가 아닙니다.";
+
+/* ---------- 실제 데이터 (data/*.json). 없으면 예시 모드 ---------- */
+function getJSON(url){
+  return new Promise(function(res,rej){
+    var done=false,to=setTimeout(function(){if(!done){done=true;rej(new Error("timeout"));}},8000);
+    fetch(url,{cache:"no-cache"}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+      .then(function(j){if(!done){done=true;clearTimeout(to);res(j);}})
+      .catch(function(e){if(!done){done=true;clearTimeout(to);rej(e);}});
+  });
+}
+var REAL=null;
+var realReady=getJSON("data/index.json").then(function(j){if(j&&Array.isArray(j.markets))REAL=j;}).catch(function(){});
+function realInfo(id){return REAL?REAL.markets.filter(function(x){return x.id===id;})[0]:null;}
+function ymdDate(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2]);}
+function mdOf(s){var p=s.split("-");return (+p[p.length-2])+"/"+(+p[p.length-1]);}
+function dateLabel(s){var x=ymdDate(s);return x.getFullYear()+"."+(x.getMonth()+1)+"."+x.getDate()+" ("+W[x.getDay()]+") 정산분";}
+function genLabel(g){return g?g.slice(5,10).replace("-","/")+" "+g.slice(11,16):"";}
+function setNotice(prefix,kind,text){
+  var box=document.getElementById(prefix+"notice");
+  document.getElementById(prefix+"nb").textContent=kind==="real"?"실제 데이터":kind==="none"?"수집 안 함":"예시 데이터";
+  document.getElementById(prefix+"nt").textContent=text;
+  box.className="notice"+(kind==="real"?" ok":"");
+}
+function setFoot(real){
+  document.getElementById("fnote").textContent=real
+    ?"가격은 표시된 규격 1단위(예: 10kg 상자)의 낙찰가를 물량으로 가중 평균한 값입니다. 등락은 직전 거래일 대비이고, 야간 경매는 다음 날 정산분으로 집계됩니다."
+    :"가격은 상품(上) 등급 평균 경락가, 등락은 직전 경매일 대비입니다.";
+}
+function mapReal(j){
+  return j.items.map(function(x,i){
+    var wk=x.week,today=wk[wk.length-1],prev=wk.length>1?wk[wk.length-2]:today;
+    return {id:"r"+i,n:x.n,v:x.v,u:x.u,c:x.c,week:wk,wdays:x.wdays,today:today,prev:prev,
+      pct:prev?(today-prev)/prev*100:0,diff:today-prev,vol:x.vol,origins:x.origins,corps:x.corps,lots:x.lots};
+  });
+}
 
 function spark(week,w,h,k,big){
-  var lo=Math.min.apply(null,week),hi=Math.max.apply(null,week),pad=big?6:3,span=hi-lo||1;
-  var pts=week.map(function(v,i){return [pad+i*(w-pad*2)/6, pad+(h-pad*2)*(1-(v-lo)/span)];});
+  var n=week.length,lo=Math.min.apply(null,week),hi=Math.max.apply(null,week),pad=big?6:3,span=hi-lo;
+  var pts=week.map(function(v,i){
+    var f=span?(v-lo)/span:0.5;
+    return [n>1?pad+i*(w-pad*2)/(n-1):w/2, pad+(h-pad*2)*(1-f)];
+  });
   var col=k==="up"?"var(--up)":k==="down"?"var(--down)":"var(--muted)";
   var s=svg("svg",{viewBox:"0 0 "+w+" "+h,width:big?"100%":w,height:h,"aria-hidden":"true",preserveAspectRatio:"none"});
   s.setAttribute("class","spark");
   if(big){
     [0.25,0.5,0.75].forEach(function(f){s.appendChild(svg("line",{x1:pad,x2:w-pad,y1:h*f,y2:h*f,stroke:"var(--line)","stroke-width":1,"vector-effect":"non-scaling-stroke"}));});
-    var area="M"+pts[0][0]+","+(h-pad)+" "+pts.map(function(p){return "L"+p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" ")+" L"+pts[6][0]+","+(h-pad)+" Z";
-    s.appendChild(svg("path",{d:area,fill:col,opacity:.12}));
+    if(n>1){
+      var area="M"+pts[0][0]+","+(h-pad)+" "+pts.map(function(p){return "L"+p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" ")+" L"+pts[n-1][0]+","+(h-pad)+" Z";
+      s.appendChild(svg("path",{d:area,fill:col,opacity:.12}));
+    }
   }
-  s.appendChild(svg("polyline",{points:pts.map(function(p){return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" "),fill:"none",stroke:col,"stroke-width":big?2:1.6,"stroke-linejoin":"round","stroke-linecap":"round","vector-effect":"non-scaling-stroke"}));
-  if(!big)s.appendChild(svg("circle",{cx:pts[6][0],cy:pts[6][1],r:2.4,fill:col}));
+  if(n>1)s.appendChild(svg("polyline",{points:pts.map(function(p){return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" "),fill:"none",stroke:col,"stroke-width":big?2:1.6,"stroke-linejoin":"round","stroke-linecap":"round","vector-effect":"non-scaling-stroke"}));
+  if(!big||n===1)s.appendChild(svg("circle",{cx:pts[n-1][0],cy:pts[n-1][1],r:2.4,fill:col}));
   return s;
 }
 
@@ -342,9 +386,10 @@ function block(title,node){var s=el("section");s.appendChild(el("h3",null,title)
 var $home=document.getElementById("home"),$mkt=document.getElementById("mkt");
 
 function stats(m){
+  if(REAL){var i=realInfo(m.id);return i?{up:i.up,dn:i.dn,ok:true}:{ok:false};}
   var data=build(m),up=0,dn=0;
   data.forEach(function(x){var k=dir(x.pct);if(k==="up")up++;else if(k==="down")dn++;});
-  return {up:up,dn:dn};
+  return {up:up,dn:dn,ok:true};
 }
 
 function renderPins(){
@@ -357,9 +402,9 @@ function renderPins(){
     var s=stats(m),a=el("a","mcard");a.href="#"+m.id;
     a.appendChild(el("span","mn",m.n));
     a.appendChild(el("span","mr",m.r));
-    var st=el("span","ms num");
-    st.appendChild(el("span","up-t","▲ "+s.up));
-    st.appendChild(el("span","down-t","▼ "+s.dn));
+    var st=el("span","ms num"+(s.ok?"":" off"));
+    if(s.ok){st.appendChild(el("span","up-t","▲ "+s.up));st.appendChild(el("span","down-t","▼ "+s.dn));}
+    else st.appendChild(el("span",null,"수집 안 함"));
     a.appendChild(st);
     box.appendChild(a);
   });
@@ -381,7 +426,7 @@ function renderAll(){
       var a=el("a");a.href="#"+m.id;
       a.appendChild(el("span","nm",m.n));
       var s=stats(m);
-      a.appendChild(el("span","sb num","오른 "+s.up+" · 내린 "+s.dn));
+      a.appendChild(el("span","sb num",s.ok?"오른 "+s.up+" · 내린 "+s.dn:"수집 안 함"));
       var b=el("button","pinbtn",on?"★":"☆");b.type="button";b.setAttribute("aria-pressed",on);
       b.setAttribute("aria-label",m.n+(on?" 고정 해제":" 자주 보는 시장에 고정"));
       b.addEventListener("click",function(){
@@ -398,12 +443,19 @@ function renderAll(){
 function showHome(){
   $mkt.hidden=true;$home.hidden=false;
   document.title="도매시장 경락가";
-  document.getElementById("hdate").textContent=dateText;
+  if(REAL){
+    setNotice("h","real","최근 갱신 "+genLabel(REAL.generated)+". 수집 중인 시장만 시세가 나옵니다.");
+    document.getElementById("hdate").textContent="갱신 "+genLabel(REAL.generated);
+  } else {
+    setNotice("h","sample","가격과 물량은 화면 확인용으로 만든 숫자입니다. 실제 경매 결과가 아닙니다.");
+    document.getElementById("hdate").textContent=dateText;
+  }
+  setFoot(!!REAL);
   renderPins();renderAll();
 }
 
 /* ---------- 시장 화면 ---------- */
-var $list=document.getElementById("list");
+var $list=document.getElementById("list"),$chips=document.getElementById("chips");
 
 function detail(it){
   var d=el("div","detail"),k=dir(it.pct);
@@ -411,10 +463,17 @@ function detail(it){
   var lo=Math.min.apply(null,it.week),hi=Math.max.apply(null,it.week);
   var rg=el("div","rng num");rg.appendChild(el("div",null,"최고 "+won(hi)));rg.appendChild(el("div",null,"최저 "+won(lo)));
   wk.appendChild(rg);
-  d.appendChild(block("최근 7 경매일 ("+fmtDay(days[0])+" ~ "+fmtDay(days[6])+") 상품 평균가",wk));
+  var range=it.wdays&&it.wdays.length?mdOf(it.wdays[0])+" ~ "+mdOf(it.wdays[it.wdays.length-1]):fmtDay(days[0])+" ~ "+fmtDay(days[6]);
+  d.appendChild(block("최근 경매일 ("+range+") "+(it.origins?"평균 낙찰가 (원)":"상품 평균가"),wk));
+  if(it.origins)d.appendChild(el("p","hint","가격은 "+it.u+" 1개 기준 낙찰가입니다."));
 
-  d.appendChild(block("등급별 경락가 (원)",table(["등급","평균","최고","최저","물량"],
-    it.grades.map(function(g){return [el("span","grade",g.g),won(g.avg),won(g.hi),won(g.lo),won(g.q)];}))));
+  if(it.origins){
+    d.appendChild(block("산지별 낙찰가 (원)",table(["산지","평균","최고","최저","물량"],
+      it.origins.slice(0,8).map(function(o){return [o.o,won(o.avg),won(o.hi),won(o.lo),won(o.q)];}))));
+  } else {
+    d.appendChild(block("등급별 경락가 (원)",table(["등급","평균","최고","최저","물량"],
+      it.grades.map(function(g){return [el("span","grade",g.g),won(g.avg),won(g.hi),won(g.lo),won(g.q)];}))));
+  }
 
   var sel=state.corp[it.id]||null,selIdx=-1;
   var corpRows=it.corps.map(function(c,ci){
@@ -426,8 +485,15 @@ function detail(it){
   d.appendChild(block("법인별 상품 평균 (원)",table(["법인","평균가","물량"],corpRows,selIdx)));
   if(sel){
     var mine=it.lots.filter(function(l){return l.c===sel;}).slice(0,8);
-    d.appendChild(block(sel+" 최근 낙찰 내역",table(["시각","산지","등급","수량","낙찰가"],
-      mine.map(function(l){return [fmtTime(l.t),l.o,el("span","grade",l.g),won(l.q),won(l.p)];}))));
+    if(!mine.length){
+      d.appendChild(el("p","hint",sel+"의 낙찰 내역이 없습니다."));
+    } else if(mine[0].g){
+      d.appendChild(block(sel+" 최근 낙찰 내역",table(["시각","산지","등급","수량","낙찰가"],
+        mine.map(function(l){return [fmtTime(l.t),l.o,el("span","grade",l.g),won(l.q),won(l.p)];}))));
+    } else {
+      d.appendChild(block(sel+" 최근 낙찰 내역",table(["시각","산지","수량","낙찰가"],
+        mine.map(function(l){return [fmtTime(l.t),l.o,won(l.q),won(l.p)];}))));
+    }
   } else {
     d.appendChild(el("p","hint","법인 이름을 누르면 그 법인의 최근 낙찰 내역이 나옵니다."));
   }
@@ -474,55 +540,105 @@ function render(){
   if(!rows.length){
     var msg=state.cat==="관심"&&!q?"관심 품목이 아직 없습니다. 품목을 눌러 펼친 뒤 '관심 품목에 담기'를 누르세요.":"조건에 맞는 품목이 없습니다. 검색어나 분류를 바꿔 보세요.";
     $list.appendChild(el("li","empty",msg));
-  } else rows.forEach(function(it){$list.appendChild(row(it));});
+  } else {
+    rows.slice(0,state.limit).forEach(function(it){$list.appendChild(row(it));});
+    if(rows.length>state.limit){
+      var li=el("li"),mb=el("button","more","더 보기 ("+(rows.length-state.limit)+"개 남음)");mb.type="button";mb.style.width="100%";
+      mb.addEventListener("click",function(){state.limit+=SHOW;render();});
+      li.appendChild(mb);$list.appendChild(li);
+    }
+  }
   Array.prototype.forEach.call(document.querySelectorAll(".chip"),function(c){c.setAttribute("aria-pressed",c.dataset.cat===state.cat);});
 }
 
+function buildChips(){
+  var cnt={};
+  DATA.forEach(function(x){cnt[x.c]=(cnt[x.c]||0)+1;});
+  var cats=Object.keys(cnt).sort(function(a,b){
+    var ia=CATS.indexOf(a),ib=CATS.indexOf(b);
+    if(ia>=0&&ib>=0)return ia-ib;
+    return cnt[b]-cnt[a];
+  });
+  cats=["전체","관심"].concat(cats);
+  if(cats.indexOf(state.cat)<0)state.cat="전체";
+  $chips.textContent="";
+  cats.forEach(function(c){
+    var b=el("button","chip",c==="관심"?"★ 관심":c);b.type="button";b.dataset.cat=c;
+    b.addEventListener("click",function(){state.cat=c;state.limit=SHOW;render();});
+    $chips.appendChild(b);
+  });
+}
+
 function renderSummary(){
+  var box=document.getElementById("summary");box.textContent="";
+  if(!DATA.length)return;
   var up=DATA.filter(function(x){return dir(x.pct)==="up";}).length,
       dn=DATA.filter(function(x){return dir(x.pct)==="down";}).length,
       top=DATA.slice().sort(function(a,b){return b.pct-a.pct;})[0],
-      bot=DATA.slice().sort(function(a,b){return a.pct-b.pct;})[0],
-      box=document.getElementById("summary");
+      bot=DATA.slice().sort(function(a,b){return a.pct-b.pct;})[0];
   function tile(k,v,cls,s){var x=el("div","tile");x.appendChild(el("div","k",k));x.appendChild(el("div","v num "+cls,v));x.appendChild(el("div","s num",s));return x;}
-  box.textContent="";
   box.appendChild(tile("오른 품목 / 내린 품목",up+" / "+dn,"","전체 "+DATA.length+"개 품목"));
   box.appendChild(tile("가장 많이 오름",top.n+(top.v?" ("+top.v+")":""),"up",pctText(top.pct)));
   box.appendChild(tile("가장 많이 내림",bot.n+(bot.v?" ("+bot.v+")":""),"down",pctText(bot.pct)));
 }
 
-function showMarket(m){
+function showMarket(m,my){
   if(curMarket!==m.id){
     curMarket=m.id;
-    state.q="";state.cat="전체";state.sort="name";state.open=null;state.corp={};
+    state.q="";state.cat="전체";state.sort="name";state.open=null;state.corp={};state.limit=SHOW;
     document.getElementById("q").value="";document.getElementById("sort").value="name";
   }
-  DATA=build(m);
   $home.hidden=true;$mkt.hidden=false;
   document.title=m.n+" 경락가";
   document.getElementById("mtitle").textContent=m.n+" 경락가";
-  document.getElementById("date").textContent=dateText;
-  renderSummary();render();
+  function finish(dateStr){
+    document.getElementById("date").textContent=dateStr;
+    buildChips();renderSummary();render();
+  }
+  function empty(msg){
+    DATA=[];$chips.textContent="";document.getElementById("summary").textContent="";
+    $list.textContent="";$list.appendChild(el("li","empty",msg));
+  }
+  if(!REAL){
+    DATA=build(m);setNotice("m","sample",SAMPLE_NOTE);setFoot(false);finish(dateText);return;
+  }
+  setFoot(true);
+  var info=realInfo(m.id);
+  if(!info){
+    setNotice("m","none","이 시장은 아직 수집하지 않습니다.");
+    document.getElementById("date").textContent="";
+    empty("저장소의 scripts/markets.json 에서 active 목록에 '"+m.id+"'를 추가하면 다음 갱신부터 시세가 나옵니다.");
+    return;
+  }
+  document.getElementById("date").textContent="";
+  empty("불러오는 중입니다.");
+  getJSON("data/"+m.id+".json").then(function(j){
+    if(my!==token)return;
+    DATA=mapReal(j);
+    setNotice("m","real","기준일 "+dateLabel(j.date)+" · 갱신 "+genLabel(j.generated)+(j.total_items>j.items.length?" · 물량 많은 "+j.items.length+"개 품목만 표시":""));
+    finish("");
+  }).catch(function(){
+    if(my!==token)return;
+    setNotice("m","none","데이터를 불러오지 못했습니다.");
+    empty("잠시 뒤 다시 열어 보세요. 계속 안 나오면 저장소의 Actions 실행 기록을 확인해 주세요.");
+  });
 }
 
 /* ---------- 조작부 연결 ---------- */
-var $chips=document.getElementById("chips");
-CATS.forEach(function(c){
-  var b=el("button","chip",c==="관심"?"★ 관심":c);b.type="button";b.dataset.cat=c;
-  b.addEventListener("click",function(){state.cat=c;render();});
-  $chips.appendChild(b);
-});
-document.getElementById("q").addEventListener("input",function(e){state.q=e.target.value;render();});
-document.getElementById("sort").addEventListener("change",function(e){state.sort=e.target.value;render();});
+document.getElementById("q").addEventListener("input",function(e){state.q=e.target.value;state.limit=SHOW;render();});
+document.getElementById("sort").addEventListener("change",function(e){state.sort=e.target.value;state.limit=SHOW;render();});
 document.getElementById("msearch").addEventListener("input",function(e){msearch=e.target.value;renderAll();});
 
 /* ---------- 주소 해시로 화면 전환 ---------- */
 function route(){
   var id="";
   try{id=decodeURIComponent((location.hash||"").replace(/^#/,""));}catch(e){}
-  var m=find(id);
-  if(m)showMarket(m);else{curMarket=null;showHome();}
-  try{window.scrollTo(0,0);}catch(e){}
+  var m=find(id),my=++token;
+  realReady.then(function(){
+    if(my!==token)return;
+    if(m)showMarket(m,my);else{curMarket=null;showHome();}
+    try{window.scrollTo(0,0);}catch(e){}
+  });
 }
 window.addEventListener("hashchange",route);
 route();

@@ -1,0 +1,45 @@
+name: update-data
+
+on:
+  schedule:
+    - cron: "20 */3 * * *"   # 3시간마다 (UTC 기준)
+  workflow_dispatch:
+    inputs:
+      discover:
+        description: "도매시장 코드 목록을 다시 찾기 (1 이면 실행)"
+        required: false
+        default: "0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 경락 데이터 받기
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          DISCOVER: ${{ github.event.inputs.discover }}
+        run: python3 scripts/fetch.py
+
+      - name: 바뀐 데이터 저장
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data
+          if git diff --cached --quiet; then
+            echo "바뀐 데이터 없음"
+          else
+            git commit -m "data: 경락 데이터 갱신 $(date -u +'%Y-%m-%d %H:%M') UTC"
+            git pull --rebase origin main
+            git push
+          fi
