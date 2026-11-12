@@ -477,12 +477,39 @@ function selOf(it){
   return s;
 }
 
+/* 14일이 지난 날짜는 archive 브랜치에 있다. 달력을 열 때 목록만 불러온다 */
+var ARCH_BASE="https://raw.githubusercontent.com/Sang-Ho-Git/MarketPrices/archive/",archIdx={};
+function archive(){
+  if(!REAL)return {status:"none",dates:{}};
+  var e=archIdx[curMarket];
+  if(e)return e;
+  e=archIdx[curMarket]={status:"loading",dates:{}};
+  var mk=curMarket;
+  getJSON(ARCH_BASE+"index/"+mk+".json",15000).then(function(j){
+    e.status="ok";e.dates=j.dates||{};
+    for(var c in (j.corps||{}))if(!CORPNAMES[c])CORPNAMES[c]=j.corps[c];
+    if(mk===curMarket)render();
+  }).catch(function(){e.status="none";});   // 아직 보관된 날짜가 없으면 404 이다
+  return e;
+}
+function allDays(it){
+  var m={};it.wdays.forEach(function(x){m[x]=1;});
+  if(it.cd)Object.keys(it.cd).forEach(function(x){m[x]=1;});
+  var a=archive().dates;for(var x in a)m[x]=1;
+  return Object.keys(m).sort();
+}
+function corpsOn(it,date){
+  if(it.cd&&it.cd[date])return it.cd[date];
+  return (archive().dates[date]||[]).map(function(c){return [c,null,null];});
+}
+
 /* 법인·날짜별 낙찰 파일 하나를 눌렀을 때 불러온다 */
-function lotsFile(date,code){
+function lotsFile(date,code,old){
   var k=curMarket+"|"+date+"|"+code,e=fileCache[k];
   if(e)return e;
   e=fileCache[k]={status:"loading"};
-  getJSON("data/lots/"+curMarket+"/"+date+"/"+encodeURIComponent(code)+".json",20000).then(function(j){
+  var base=old?ARCH_BASE+"lots/":"data/lots/";
+  getJSON(base+curMarket+"/"+date+"/"+encodeURIComponent(code)+".json",20000).then(function(j){
     e.status="ok";e.data=j;render();
   }).catch(function(){
     e.status="err";render();
@@ -501,7 +528,7 @@ function sampleLots(it,date,code){
 }
 function lotRows(it,date,code){
   if(!REAL)return {status:"ok",rows:sampleLots(it,date,code)};
-  var e=lotsFile(date,code);
+  var e=lotsFile(date,code,!(it.cd&&it.cd[date]));
   if(e.status!=="ok")return {status:e.status,rows:[]};
   var key=it.n+"|"+it.v+"|"+it.u,idx=e.data.items.indexOf(key),rows=[];
   if(idx>=0)e.data.rows.forEach(function(r){if(r[0]===idx)rows.push({t:r[1],o:e.data.origins[r[2]],q:r[3],p:r[4]});});
@@ -510,9 +537,9 @@ function lotRows(it,date,code){
 
 /* 달력: 거래가 있었던 날만 누를 수 있다 */
 function calendar(it,s){
-  var have={};it.wdays.forEach(function(x){have[x]=1;});
+  var have={},days=allDays(it);days.forEach(function(x){have[x]=1;});
   var p=s.ym.split("-"),y=+p[0],mo=+p[1];
-  var minYM=it.wdays[0].slice(0,7),maxYM=it.wdays[it.wdays.length-1].slice(0,7);
+  var minYM=days[0].slice(0,7),maxYM=days[days.length-1].slice(0,7);
   var box=el("div","cal"),head=el("div","calhead");
   function nav(txt,delta,dis,label){
     var b=el("button","calnav",txt);b.type="button";b.disabled=dis;b.setAttribute("aria-label",label);
@@ -534,7 +561,7 @@ function calendar(it,s){
       if(have[ds])b.setAttribute("aria-label",mo+"월 "+dd+"일");
       b.addEventListener("click",function(){
         s.d=ds;
-        var list=(it.cd&&it.cd[ds])||[];
+        var list=corpsOn(it,ds);
         if(s.corp&&!list.some(function(z){return z[0]===s.corp;}))s.corp=null;
         render();
       });
@@ -559,12 +586,12 @@ function detail(it){
   var s=selOf(it);
   d.appendChild(block("날짜 선택",calendar(it,s)));
 
-  var list=(it.cd&&it.cd[s.d])||[],selIdx=-1;
+  var list=corpsOn(it,s.d),selIdx=-1;
   var corpRows=list.map(function(z,i){
     if(z[0]===s.corp)selIdx=i;
     var cb=el("button","corpbtn",corpName(z[0]));cb.type="button";cb.setAttribute("aria-pressed",z[0]===s.corp);
     cb.addEventListener("click",function(){s.corp=(s.corp===z[0])?null:z[0];render();});
-    return [cb,won(z[1]),won(z[2])];
+    return [cb,z[1]==null?"–":won(z[1]),z[2]==null?"–":won(z[2])];
   });
   d.appendChild(block("법인별 평균 낙찰가 ("+mdOf(s.d)+", 원)",corpRows.length
     ?table(["법인","평균가","물량"],corpRows,selIdx)

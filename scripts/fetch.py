@@ -26,8 +26,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 KST = datetime.timezone(datetime.timedelta(hours=9))
 
-WINDOW = 7          # 최근 며칠(달력 기준)을 모을지
+WINDOW = 14         # 저장소(main)에 두는 최근 일수. 이보다 오래된 날은 archive 로 옮긴다.
+GRAPH_DAYS = 7      # 그래프에 쓰는 최근 일수
 REFRESH_DAYS = 2    # 항상 다시 받을 최근 며칠
+ARCHIVE_DIR = os.environ.get("ARCHIVE_DIR", "").strip()   # archive 브랜치를 내려받은 폴더
 PAGE_SIZE = 1000
 MAX_CALLS = 2500    # 한 번 실행에서 부를 수 있는 최대 횟수
 MAX_ITEMS = 500     # 시장 파일에 담을 최대 품목(규격) 수, 물량 많은 순
@@ -269,14 +271,16 @@ def build_market(days_data):
     corp_names = {}
     for d in dates:
         corp_names.update(days_data[d].get("names") or {})
+    graph = set(dates[-GRAPH_DAYS:])
     out = []
     for key, it in days_data[latest]["items"].items():
         week, wd, cd = [], [], {}
         for d in dates:
             x = days_data[d]["items"].get(key)
             if x and x["q"] > 0:
-                week.append(whole(x["sp"] / x["q"]))
-                wd.append(d)
+                if d in graph:
+                    week.append(whole(x["sp"] / x["q"]))
+                    wd.append(d)
                 cd[d] = sorted(([c, whole(s / q), clean(q)] for c, (s, q) in x["corps"].items()),
                                key=lambda z: z[2], reverse=True)
         out.append({"n": it["n"], "v": it["v"], "u": it["u"], "c": it["c"],
@@ -322,17 +326,45 @@ def collect_market(m, code, today):
         log("  %s %s: 행 %d, 품목 %d, 법인 %d" % (m["id"], ds, len(rows), len(items), len(files)))
         write_json(path, day)
         days_data[ds] = day
-    # 오래된 파일 정리
-    keep = {(today - datetime.timedelta(days=i)).isoformat() for i in range(WINDOW + 3)}
+    # 오래된 파일 정리: 일별 집계는 지우고, 낙찰 파일은 archive 로 옮긴다.
+    recent = {(today - datetime.timedelta(days=i)).isoformat() for i in range(WINDOW)}
     if os.path.isdir(base):
         for f in os.listdir(base):
-            if f[:-5] not in keep:
+            if f[:-5] not in recent:
                 os.remove(os.path.join(base, f))
-    if os.path.isdir(lots_base):
-        for d in os.listdir(lots_base):
-            if d not in keep:
-                shutil.rmtree(os.path.join(lots_base, d), ignore_errors=True)
+    archive_old(m["id"], lots_base, recent)
     return days_data
+
+
+def archive_old(mid, lots_base, recent):
+    """보관 기간이 지난 날의 낙찰 파일을 archive 폴더로 옮기고, 날짜·법인 색인을 갱신한다."""
+    if not os.path.isdir(lots_base):
+        return
+    old = sorted(d for d in os.listdir(lots_base) if d not in recent)
+    if not old:
+        return
+    if not ARCHIVE_DIR:
+        log("  ARCHIVE_DIR 가 없어 오래된 낙찰 파일 %d일치를 지우지 않고 둡니다." % len(old))
+        return
+    idx_path = os.path.join(ARCHIVE_DIR, "index", mid + ".json")
+    idx = read_json(idx_path, {"dates": {}, "corps": {}})
+    for d in old:
+        src = os.path.join(lots_base, d)
+        dst = os.path.join(ARCHIVE_DIR, "lots", mid, d)
+        if not os.path.exists(dst):
+            shutil.copytree(src, dst)
+        codes = []
+        for f in os.listdir(src):
+            if f.endswith(".json"):
+                code = f[:-5]
+                codes.append(code)
+                name = (read_json(os.path.join(src, f), {}) or {}).get("corp")
+                if name:
+                    idx["corps"][code] = name
+        idx["dates"][d] = sorted(codes)
+        shutil.rmtree(src, ignore_errors=True)
+        log("  보관으로 이동: %s %s" % (mid, d))
+    write_json(idx_path, idx)
 
 
 def main():

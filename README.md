@@ -7,7 +7,8 @@
 - `index.html` 화면 전체 (시장 선택 → 품목 시세 → 산지·법인·낙찰 내역). 주소 끝 `#garak`, `#anyang` 처럼 시장별로 열립니다.
 - `scripts/fetch.py` API에서 데이터를 받아 `data/*.json` 으로 저장합니다.
 - `scripts/markets.json` 수집할 시장(`active`)과 시장 이름 매칭 글자(`match`)를 적습니다.
-- `.github/workflows/update.yml` 3시간마다 `fetch.py` 를 실행하고 바뀐 데이터를 저장합니다.
+- `.github/workflows/update.yml` 매일 한국시간 07:00, 19:00 에 `fetch.py` 를 실행하고 바뀐 데이터를 저장합니다.
+- `archive` 브랜치 14일이 지난 낙찰 파일을 옮겨 두는 곳입니다. 화면에서 오래된 날짜를 고르면 여기서 불러옵니다.
 
 ## 처음 한 번
 1. Settings → Secrets and variables → Actions 에 `DATA_GO_KR_KEY` (인증키) 등록

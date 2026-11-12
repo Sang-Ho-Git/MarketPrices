@@ -2,7 +2,8 @@ name: update-data
 
 on:
   schedule:
-    - cron: "20 */3 * * *"   # 3시간마다 (UTC 기준)
+    # 한국시간 07:00, 19:00 (UTC 22:00, 10:00)
+    - cron: "0 22,10 * * *"
   workflow_dispatch:
     inputs:
       discover:
@@ -24,14 +25,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: archive 브랜치 준비 (없으면 새로 만든다)
+        run: |
+          if git ls-remote --exit-code --heads origin archive >/dev/null 2>&1; then
+            git fetch --depth=1 origin archive
+            git worktree add -B archive archive-branch FETCH_HEAD
+          else
+            git worktree add --detach archive-branch
+            git -C archive-branch checkout --orphan archive
+            git -C archive-branch rm -rf . >/dev/null 2>&1 || true
+          fi
+
       - name: 경락 데이터 받기
         timeout-minutes: 24   # 넘기면 이 단계만 멈추고, 받은 데이터는 아래 단계에서 저장한다
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           DISCOVER: ${{ github.event.inputs.discover }}
+          ARCHIVE_DIR: ${{ github.workspace }}/archive-branch
         run: python3 scripts/fetch.py
 
-      - name: 바뀐 데이터 저장
+      - name: 바뀐 데이터 저장 (main)
         if: always()
         run: |
           git config user.name "github-actions[bot]"
@@ -43,4 +56,18 @@ jobs:
             git commit -m "data: 경락 데이터 갱신 $(date -u +'%Y-%m-%d %H:%M') UTC"
             git pull --rebase origin main
             git push
+          fi
+
+      - name: 오래된 데이터 보관 (archive)
+        if: always()
+        working-directory: archive-branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .
+          if git diff --cached --quiet; then
+            echo "새로 보관할 데이터 없음"
+          else
+            git commit -m "archive: $(date -u +'%Y-%m-%d') UTC"
+            git push origin archive
           fi
