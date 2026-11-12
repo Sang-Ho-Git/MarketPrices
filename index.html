@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>도매시장 경락가</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* 레이아웃: 메인에서 시장을 고르고(#시장id), 시장 화면에서 품목 시세를 훑는다. 자주 보는 시장은 위에 큰 카드로 고정. */
+:root{
+  --bg:#f3f5f1;
+  --surface:#ffffff;
+  --ink:#16221b;
+  --muted:#5f6d64;
+  --line:#dde3dc;
+  --accent:#1d6b45;
+  --accent-soft:#e3efe7;
+  --up:#cf3327;
+  --up-soft:#fbe9e6;
+  --down:#1f5fbf;
+  --down-soft:#e6eefb;
+  --warn-bg:#fff4d6;
+  --warn-ink:#6b4a00;
+  --display:"Do Hyeon","IBM Plex Sans KR",system-ui,sans-serif;
+  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101612;--surface:#18211c;--ink:#e8efe9;--muted:#9aa89f;--line:#2a362f;
+    --accent:#6cc494;--accent-soft:#1d3327;
+    --up:#ff7a6b;--up-soft:#3a1d1a;--down:#7fb0ff;--down-soft:#18273f;
+    --warn-bg:#3a2f10;--warn-ink:#f3d98a;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101612;--surface:#18211c;--ink:#e8efe9;--muted:#9aa89f;--line:#2a362f;
+  --accent:#6cc494;--accent-soft:#1d3327;
+  --up:#ff7a6b;--up-soft:#3a1d1a;--down:#7fb0ff;--down-soft:#18273f;
+  --warn-bg:#3a2f10;--warn-ink:#f3d98a;color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+[hidden]{display:none !important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px 40px}
+.num{font-variant-numeric:tabular-nums}
+
+header{padding:20px 0 12px;display:flex;flex-direction:column;gap:6px}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:400;font-size:28px;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:.01em}
+h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 8px}
+.date{color:var(--muted);font-size:13px}
+.back{display:inline-flex;align-items:center;min-height:44px;color:var(--accent);font-weight:600;font-size:14px;text-decoration:none;margin-top:4px}
+.notice{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:10px 12px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.notice b{font-weight:600;white-space:nowrap}
+
+/* 메인 */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mcard{display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;text-decoration:none;color:inherit;min-height:96px}
+.mcard .mn{font-family:var(--display);font-size:24px;line-height:1.15}
+.mcard .mr{font-size:12px;color:var(--muted)}
+.mcard .ms{margin-top:auto;font-size:13px;display:flex;gap:10px;padding-top:6px}
+.up-t{color:var(--up);font-weight:600}.down-t{color:var(--down);font-weight:600}
+.pinhint{margin:0;padding:18px 12px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface);border:1px dashed var(--line);border-radius:14px}
+.search{width:100%;margin-bottom:8px}
+.region{margin:12px 0 0}
+.region h3{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 4px;padding-left:2px}
+.mlist{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.mrow{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.mrow:last-child{border-bottom:0}
+.mrow a{flex:1;display:flex;flex-direction:column;justify-content:center;padding:10px 14px;min-height:52px;text-decoration:none;color:inherit;min-width:0}
+.mrow .nm{font-weight:600}
+.mrow .sb{font-size:12px;color:var(--muted)}
+.pinbtn{flex:none;width:52px;border:0;border-left:1px solid var(--line);background:none;font:inherit;font-size:20px;color:var(--muted);cursor:pointer}
+.pinbtn[aria-pressed=true]{color:var(--accent)}
+
+/* 시장 화면 */
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.tile .k{font-size:12px;color:var(--muted)}
+.tile .v{font-family:var(--display);font-size:22px;line-height:1.2}
+.tile .v.up{color:var(--up)} .tile .v.down{color:var(--down)}
+.tile .s{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+
+.controls{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 10px;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px}
+input[type=search],select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;height:44px;padding:0 12px;min-width:0}
+input[type=search]{flex:1}
+select{flex:none}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;font:inherit;font-size:14px;height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.list{display:flex;flex-direction:column;gap:8px;margin:4px 0 0;padding:0;list-style:none}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item.open{border-color:var(--accent)}
+.head{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:12px 12px 12px 14px;cursor:pointer;width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left}
+.name{font-weight:600;font-size:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.unit{font-size:12px;color:var(--muted);font-weight:400}
+.price{font-family:var(--display);font-size:22px;text-align:right;line-height:1.1}
+.price small{font-family:var(--body);font-size:12px;color:var(--muted);margin-left:2px}
+.sub{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;flex-wrap:wrap}
+.pill{justify-self:end;font-size:13px;font-weight:600;border-radius:8px;padding:2px 8px;white-space:nowrap}
+.pill.up{color:var(--up);background:var(--up-soft)}
+.pill.down{color:var(--down);background:var(--down-soft)}
+.pill.flat{color:var(--muted);background:var(--bg)}
+.spark{display:block}
+
+.detail{border-top:1px solid var(--line);padding:12px 14px 14px;display:flex;flex-direction:column;gap:14px}
+.detail h3{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 6px}
+.week{display:flex;align-items:flex-end;gap:10px}
+.week svg{flex:1;min-width:0;height:64px}
+.week .rng{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 4px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:12px}
+th:first-child,td:first-child{text-align:left}
+tr:last-child td{border-bottom:0}
+.corpbtn{font:inherit;font-size:13px;color:var(--accent);background:none;border:0;padding:8px 0;min-height:40px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-align:left}
+.corpbtn[aria-pressed=true]{font-weight:600}
+tr.sel td{background:var(--accent-soft)}
+.hint{margin:0;font-size:12px;color:var(--muted)}
+.grade{display:inline-block;min-width:34px;text-align:center;border-radius:6px;padding:1px 6px;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:12px}
+.fav{align-self:flex-start;font:inherit;font-size:14px;height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.fav[aria-pressed=true]{border-color:var(--accent);color:var(--accent);font-weight:600}
+.star{color:var(--accent);font-size:13px}
+.empty{padding:28px 12px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:14px}
+footer{margin-top:20px;color:var(--muted);font-size:12px;display:flex;flex-direction:column;gap:4px}
+footer a{color:var(--accent)}
+@media (max-width:360px){.summary{grid-template-columns:1fr 1fr}.summary .tile:last-child{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="home" hidden>
+    <header>
+      <div class="top"><h1>도매시장 경락가</h1><span class="date num" id="hdate"></span></div>
+      <div class="notice"><b>예시 데이터</b><span>가격과 물량은 화면 확인용으로 만든 숫자입니다. 실제 경매 결과가 아닙니다.</span></div>
+    </header>
+    <h2>자주 보는 시장</h2>
+    <div class="grid" id="pins"></div>
+    <h2>전체 시장</h2>
+    <input type="search" id="msearch" class="search" placeholder="시장 검색 (예: 수원, 부산)" aria-label="시장 검색" autocomplete="off">
+    <div id="allbox"></div>
+  </section>
+
+  <section id="mkt" hidden>
+    <header>
+      <a class="back" href="#">‹ 시장 선택</a>
+      <div class="top"><h1 id="mtitle"></h1><span class="date num" id="date"></span></div>
+      <div class="notice"><b>예시 데이터</b><span>지금 보이는 가격과 물량은 화면 확인용으로 만든 숫자입니다. 실제 경매 결과가 아닙니다.</span></div>
+    </header>
+
+    <section class="summary" id="summary" aria-label="오늘 요약"></section>
+
+    <div class="controls">
+      <div class="row">
+        <input type="search" id="q" placeholder="품목 검색 (예: 배추, 고추)" aria-label="품목 검색" autocomplete="off">
+        <select id="sort" aria-label="정렬">
+          <option value="name">이름순</option>
+          <option value="up">많이 오른 순</option>
+          <option value="down">많이 내린 순</option>
+          <option value="vol">물량 많은 순</option>
+        </select>
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="분류"></div>
+    </div>
+
+    <ul class="list" id="list"></ul>
+  </section>
+
+  <footer>
+    <span>가격은 상품(上) 등급 평균 경락가, 등락은 직전 경매일 대비입니다.</span>
+    <span>실제 데이터 출처(연결 예정): <a href="https://www.data.go.kr/data/15141808/openapi.do">공공데이터포털 전국 공영도매시장 실시간 경매정보</a></span>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- 시장 목록 (자주 쓰는 순서가 아니라 지역별) ---------- */
+var MARKETS=[
+ {id:"garak",n:"가락",r:"서울"},{id:"gangseo",n:"강서",r:"서울"},
+ {id:"anyang",n:"안양",r:"경기"},{id:"ansan",n:"안산",r:"경기"},{id:"suwon",n:"수원",r:"경기"},{id:"guri",n:"구리",r:"경기"},
+ {id:"incheon-samsan",n:"인천 삼산",r:"인천"},{id:"incheon-namchon",n:"인천 남촌",r:"인천"},
+ {id:"busan-eomgung",n:"부산 엄궁",r:"부산"},{id:"busan-banyeo",n:"부산 반여",r:"부산"},
+ {id:"daegu-bukbu",n:"대구 북부",r:"대구"},
+ {id:"daejeon-ojeong",n:"대전 오정",r:"대전"},{id:"daejeon-noeun",n:"대전 노은",r:"대전"},
+ {id:"gwangju-gakhwa",n:"광주 각화",r:"광주"},{id:"gwangju-seobu",n:"광주 서부",r:"광주"},
+ {id:"ulsan",n:"울산",r:"울산"},
+ {id:"gangneung",n:"강릉",r:"강원"},{id:"chuncheon",n:"춘천",r:"강원"},{id:"wonju",n:"원주",r:"강원"},
+ {id:"cheongju",n:"청주",r:"충북"},{id:"cheonan",n:"천안",r:"충남"},
+ {id:"jeonju",n:"전주",r:"전북"},{id:"iksan",n:"익산",r:"전북"},{id:"jeongeup",n:"정읍",r:"전북"},{id:"suncheon",n:"순천",r:"전남"},
+ {id:"pohang",n:"포항",r:"경북"},{id:"gumi",n:"구미",r:"경북"},
+ {id:"changwon-paryong",n:"창원 팔용",r:"경남"},{id:"jinju",n:"진주",r:"경남"}
+];
+var REGIONS=["서울","경기","인천","부산","대구","대전","광주","울산","강원","충북","충남","전북","전남","경북","경남"];
+var DEFAULT_PINS=["garak","anyang","incheon-samsan","gangseo"];
+
+/* ---------- 예시 품목 ---------- */
+var ITEMS=[
+ {n:"배추",v:"가을배추",u:"10kg 망",b:8200,c:"엽채",o:["전남 해남","강원 평창","충남 당진","전북 고창"]},
+ {n:"양배추",v:"",u:"8kg 망",b:7400,c:"엽채",o:["제주","전남 무안","충남 서산"]},
+ {n:"상추",v:"적상추",u:"4kg 상자",b:21500,c:"엽채",o:["경기 이천","충남 논산","경기 용인"]},
+ {n:"시금치",v:"",u:"4kg 상자",b:13800,c:"엽채",o:["경기 포천","경북 포항","전남 신안"]},
+ {n:"깻잎",v:"",u:"100속 상자",b:26400,c:"엽채",o:["충남 금산","경남 밀양"]},
+ {n:"무",v:"가을무",u:"20kg 상자",b:14600,c:"근채",o:["전북 고창","강원 홍천","충남 당진","제주"]},
+ {n:"당근",v:"",u:"20kg 상자",b:41800,c:"근채",o:["제주","강원 평창","경남 밀양"]},
+ {n:"감자",v:"수미",u:"20kg 상자",b:36200,c:"서류",o:["강원 평창","충남 서산","전북 김제"]},
+ {n:"고구마",v:"밤고구마",u:"10kg 상자",b:29500,c:"서류",o:["전남 해남","충남 당진","경기 여주","전북 고창"]},
+ {n:"고구마",v:"호박고구마",u:"10kg 상자",b:34800,c:"서류",o:["전남 해남","전남 영암","경남 고성"]},
+ {n:"토란",v:"",u:"10kg 상자",b:41200,c:"서류",o:["충남 서산","전북 순창","경북 상주"]},
+ {n:"냉이",v:"",u:"4kg 상자",b:38600,c:"산나물",o:["전남 해남","경남 남해","전남 신안","제주"]},
+ {n:"달래",v:"",u:"4kg 상자",b:46800,c:"산나물",o:["경남 남해","전남 완도","충남 태안"]},
+ {n:"쑥",v:"",u:"4kg 상자",b:32400,c:"산나물",o:["전남 진도","경남 거제","제주"]},
+ {n:"취나물",v:"",u:"4kg 상자",b:57800,c:"산나물",o:["강원 평창","경북 봉화","강원 정선"]},
+ {n:"도라지",v:"",u:"10kg 상자",b:69500,c:"산나물",o:["충북 괴산","경북 봉화","강원 횡성"]},
+ {n:"연근",v:"",u:"10kg 상자",b:52400,c:"근채",o:["충남 서산","전남 무안","경남 창녕"]},
+ {n:"우엉",v:"",u:"10kg 상자",b:38900,c:"근채",o:["전북 김제","충남 서산","경북 영천"]},
+ {n:"브로콜리",v:"",u:"8kg 상자",b:19800,c:"엽채",o:["제주","전남 해남","강원 평창"]},
+ {n:"양파",v:"",u:"15kg 망",b:16900,c:"양념",o:["전남 무안","경남 창녕","경북 고령"]},
+ {n:"대파",v:"",u:"1kg 단",b:2150,c:"양념",o:["전남 진도","경기 남양주","강원 평창"]},
+ {n:"마늘",v:"깐마늘",u:"20kg 상자",b:148000,c:"양념",o:["경남 창녕","경북 의성","충남 서산"]},
+ {n:"생강",v:"",u:"10kg 상자",b:72500,c:"양념",o:["충남 서산","전북 완주","경북 안동"]},
+ {n:"풋고추",v:"",u:"10kg 상자",b:43500,c:"과채",o:["경남 진주","강원 인제","경남 밀양"]},
+ {n:"청양고추",v:"",u:"10kg 상자",b:58200,c:"과채",o:["경남 밀양","경남 진주","강원 홍천"]},
+ {n:"오이",v:"백다다기",u:"100개 상자",b:52800,c:"과채",o:["충남 천안","경북 상주","강원 춘천"]},
+ {n:"애호박",v:"",u:"20개 상자",b:21300,c:"과채",o:["경남 진주","충북 청주","경기 양주"]},
+ {n:"토마토",v:"대저",u:"5kg 상자",b:24600,c:"과채",o:["부산 강서","경남 창원","충남 부여"]},
+ {n:"파프리카",v:"",u:"5kg 상자",b:28700,c:"과채",o:["경남 진주","전남 무안","충남 부여"]},
+ {n:"표고버섯",v:"생표고",u:"2kg 상자",b:19200,c:"버섯",o:["충북 괴산","경남 산청","전남 장흥"]},
+ {n:"느타리버섯",v:"",u:"2kg 상자",b:8300,c:"버섯",o:["충남 논산","경기 이천","충북 음성"]},
+ {n:"새송이버섯",v:"",u:"2kg 상자",b:7600,c:"버섯",o:["경남 거창","충북 음성","경북 문경"]},
+ {n:"사과",v:"부사",u:"10kg 상자",b:46500,c:"과일",o:["경북 안동","경북 영주","충북 충주"]},
+ {n:"배",v:"신고",u:"15kg 상자",b:41800,c:"과일",o:["전남 나주","충남 천안","경기 안성"]},
+ {n:"단감",v:"",u:"10kg 상자",b:33600,c:"과일",o:["경남 창원","경남 진영","전남 영암"]},
+ {n:"감귤",v:"노지",u:"10kg 상자",b:25400,c:"과일",o:["제주 서귀포","제주 제주시"]},
+ {n:"딸기",v:"설향",u:"2kg 상자",b:33900,c:"과일",o:["경남 진주","충남 논산","경남 산청"]}
+];
+var GRADES=[["특",1.24,.22],["상",1,.5],["보통",.73,.28]];
+var CATS=["전체","관심","엽채","근채","서류","산나물","양념","과채","버섯","과일"];
+
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hashStr(s){var h=7;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h);}
+function round(v,step){return Math.round(v/step)*step;}
+function step(b){return b>=50000?500:b>=5000?100:10;}
+
+// 최근 7개 경매일 (일요일 제외)
+var days=[],d=new Date();
+while(days.length<7){ if(d.getDay()!==0) days.unshift(new Date(d)); d.setDate(d.getDate()-1); }
+var dayKey=days[6].getFullYear()*10000+(days[6].getMonth()+1)*100+days[6].getDate();
+
+function corpsFor(m){
+  return m.id==="garak"?["서울청과","중앙청과","동화청과","한국청과","농협가락공판장"]:["A법인","B법인","C법인","D법인"];
+}
+
+var cache={};
+function build(m){
+  if(cache[m.id])return cache[m.id];
+  var CORPS=corpsFor(m),hs=hashStr(m.id),mf=0.92+(hs%17)/100;
+  var out=ITEMS.map(function(it,i){
+    var r=rng(dayKey*31+i*977+hs), s=step(it.b), p=it.b*mf*(0.9+r()*0.2), week=[];
+    for(var k=0;k<7;k++){ p*=1+(r()-0.48)*0.11; week.push(round(p,s)); }
+    var today=week[6], prev=week[5], vol=0;
+    var grades=GRADES.map(function(g){
+      var avg=round(today*g[1]*(0.98+r()*0.04),s);
+      var q=Math.round((120+r()*900)*g[2]*(it.b<5000?6:1));
+      vol+=q;
+      return {g:g[0],avg:avg,hi:round(avg*(1.06+r()*0.08),s),lo:round(avg*(0.86+r()*0.07),s),q:q};
+    });
+    var corps=CORPS.map(function(c){return {c:c,avg:round(today*(0.95+r()*0.1),s),q:Math.round(vol*(0.12+r()*0.16))};});
+    var lots=[];
+    for(var j=0;j<30;j++){
+      var g=GRADES[r()<.25?0:r()<.7?1:2], min=20*60+30+Math.floor(r()*420);
+      lots.push({t:min,c:CORPS[j%CORPS.length],o:it.o[Math.floor(r()*it.o.length)],g:g[0],
+        q:Math.round(8+r()*140),p:round(today*g[1]*(0.9+r()*0.2),s)});
+    }
+    lots.sort(function(a,b){return b.t-a.t;});
+    return {id:"i"+i,n:it.n,v:it.v,u:it.u,c:it.c,week:week,today:today,prev:prev,
+      pct:(today-prev)/prev*100,diff:today-prev,vol:vol,grades:grades,corps:corps,lots:lots};
+  });
+  cache[m.id]=out;
+  return out;
+}
+
+/* ---------- 상태 ---------- */
+var DATA=[],curMarket=null;
+var state={q:"",cat:"전체",sort:"name",open:null,fav:{},corp:{}};
+function load(key,fallback){try{var v=JSON.parse(localStorage.getItem(key));return v==null?fallback:v;}catch(e){return fallback;}}
+function save(key,v){try{localStorage.setItem(key,JSON.stringify(v));}catch(e){}}
+var favRaw=load("garak-fav",{});if(favRaw&&typeof favRaw==="object")state.fav=favRaw;
+var pins=load("garak-pins",DEFAULT_PINS);if(!Array.isArray(pins))pins=DEFAULT_PINS.slice();
+var msearch="";
+
+/* ---------- 표시 도우미 ---------- */
+var won=function(v){return v.toLocaleString("ko-KR");};
+function dir(p){return p>0.05?"up":p<-0.05?"down":"flat";}
+function pctText(p){var k=dir(p);return (k==="up"?"▲ ":k==="down"?"▼ ":"– ")+Math.abs(p).toFixed(1)+"%";}
+function fmtDay(x){return (x.getMonth()+1)+"/"+x.getDate();}
+function fmtTime(m){m=m%1440;var h=Math.floor(m/60),mm=m%60;return (h<10?"0":"")+h+":"+(mm<10?"0":"")+mm;}
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+var NS="http://www.w3.org/2000/svg";
+function svg(tag,attrs){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
+function find(id){return MARKETS.filter(function(x){return x.id===id;})[0];}
+var W="일월화수목금토",t=days[6];
+var dateText=t.getFullYear()+"."+(t.getMonth()+1)+"."+t.getDate()+" ("+W[t.getDay()]+") 경매분";
+
+function spark(week,w,h,k,big){
+  var lo=Math.min.apply(null,week),hi=Math.max.apply(null,week),pad=big?6:3,span=hi-lo||1;
+  var pts=week.map(function(v,i){return [pad+i*(w-pad*2)/6, pad+(h-pad*2)*(1-(v-lo)/span)];});
+  var col=k==="up"?"var(--up)":k==="down"?"var(--down)":"var(--muted)";
+  var s=svg("svg",{viewBox:"0 0 "+w+" "+h,width:big?"100%":w,height:h,"aria-hidden":"true",preserveAspectRatio:"none"});
+  s.setAttribute("class","spark");
+  if(big){
+    [0.25,0.5,0.75].forEach(function(f){s.appendChild(svg("line",{x1:pad,x2:w-pad,y1:h*f,y2:h*f,stroke:"var(--line)","stroke-width":1,"vector-effect":"non-scaling-stroke"}));});
+    var area="M"+pts[0][0]+","+(h-pad)+" "+pts.map(function(p){return "L"+p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" ")+" L"+pts[6][0]+","+(h-pad)+" Z";
+    s.appendChild(svg("path",{d:area,fill:col,opacity:.12}));
+  }
+  s.appendChild(svg("polyline",{points:pts.map(function(p){return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" "),fill:"none",stroke:col,"stroke-width":big?2:1.6,"stroke-linejoin":"round","stroke-linecap":"round","vector-effect":"non-scaling-stroke"}));
+  if(!big)s.appendChild(svg("circle",{cx:pts[6][0],cy:pts[6][1],r:2.4,fill:col}));
+  return s;
+}
+
+function table(heads,rows,selIdx){
+  var box=el("div","tbl"),t=el("table"),tr=el("tr");
+  heads.forEach(function(h){tr.appendChild(el("th",null,h));});
+  var th=el("thead");th.appendChild(tr);t.appendChild(th);
+  var tb=el("tbody");
+  rows.forEach(function(r,ri){var x=el("tr",ri===selIdx?"sel":null);r.forEach(function(c){var td=el("td","num");if(c instanceof Node)td.appendChild(c);else td.textContent=c;x.appendChild(td);});tb.appendChild(x);});
+  t.appendChild(tb);box.appendChild(t);return box;
+}
+function block(title,node){var s=el("section");s.appendChild(el("h3",null,title));s.appendChild(node);return s;}
+
+/* ---------- 메인: 시장 선택 ---------- */
+var $home=document.getElementById("home"),$mkt=document.getElementById("mkt");
+
+function stats(m){
+  var data=build(m),up=0,dn=0;
+  data.forEach(function(x){var k=dir(x.pct);if(k==="up")up++;else if(k==="down")dn++;});
+  return {up:up,dn:dn};
+}
+
+function renderPins(){
+  var box=document.getElementById("pins");box.textContent="";
+  var shown=pins.map(find).filter(Boolean);
+  if(!shown.length){
+    var p=el("p","pinhint","아래 전체 시장에서 ☆를 누르면 여기에 고정됩니다.");p.style.gridColumn="1/-1";box.appendChild(p);return;
+  }
+  shown.forEach(function(m){
+    var s=stats(m),a=el("a","mcard");a.href="#"+m.id;
+    a.appendChild(el("span","mn",m.n));
+    a.appendChild(el("span","mr",m.r));
+    var st=el("span","ms num");
+    st.appendChild(el("span","up-t","▲ "+s.up));
+    st.appendChild(el("span","down-t","▼ "+s.dn));
+    a.appendChild(st);
+    box.appendChild(a);
+  });
+}
+
+function renderAll(){
+  var box=document.getElementById("allbox");box.textContent="";
+  var q=msearch.trim(),any=false;
+  REGIONS.forEach(function(rg){
+    var list=MARKETS.filter(function(m){
+      return m.r===rg&&(!q||m.n.indexOf(q)>=0||m.r.indexOf(q)>=0);
+    });
+    if(!list.length)return;
+    any=true;
+    var sec=el("section","region");sec.appendChild(el("h3",null,rg));
+    var ml=el("div","mlist");
+    list.forEach(function(m){
+      var on=pins.indexOf(m.id)>=0,row=el("div","mrow");
+      var a=el("a");a.href="#"+m.id;
+      a.appendChild(el("span","nm",m.n));
+      var s=stats(m);
+      a.appendChild(el("span","sb num","오른 "+s.up+" · 내린 "+s.dn));
+      var b=el("button","pinbtn",on?"★":"☆");b.type="button";b.setAttribute("aria-pressed",on);
+      b.setAttribute("aria-label",m.n+(on?" 고정 해제":" 자주 보는 시장에 고정"));
+      b.addEventListener("click",function(){
+        var i=pins.indexOf(m.id);if(i>=0)pins.splice(i,1);else pins.push(m.id);
+        save("garak-pins",pins);renderPins();renderAll();
+      });
+      row.appendChild(a);row.appendChild(b);ml.appendChild(row);
+    });
+    sec.appendChild(ml);box.appendChild(sec);
+  });
+  if(!any)box.appendChild(el("div","empty","검색 결과가 없습니다. 시장 이름을 다시 확인해 주세요."));
+}
+
+function showHome(){
+  $mkt.hidden=true;$home.hidden=false;
+  document.title="도매시장 경락가";
+  document.getElementById("hdate").textContent=dateText;
+  renderPins();renderAll();
+}
+
+/* ---------- 시장 화면 ---------- */
+var $list=document.getElementById("list");
+
+function detail(it){
+  var d=el("div","detail"),k=dir(it.pct);
+  var wk=el("div","week");wk.appendChild(spark(it.week,300,64,k,true));
+  var lo=Math.min.apply(null,it.week),hi=Math.max.apply(null,it.week);
+  var rg=el("div","rng num");rg.appendChild(el("div",null,"최고 "+won(hi)));rg.appendChild(el("div",null,"최저 "+won(lo)));
+  wk.appendChild(rg);
+  d.appendChild(block("최근 7 경매일 ("+fmtDay(days[0])+" ~ "+fmtDay(days[6])+") 상품 평균가",wk));
+
+  d.appendChild(block("등급별 경락가 (원)",table(["등급","평균","최고","최저","물량"],
+    it.grades.map(function(g){return [el("span","grade",g.g),won(g.avg),won(g.hi),won(g.lo),won(g.q)];}))));
+
+  var sel=state.corp[it.id]||null,selIdx=-1;
+  var corpRows=it.corps.map(function(c,ci){
+    if(c.c===sel)selIdx=ci;
+    var cb=el("button","corpbtn",c.c);cb.type="button";cb.setAttribute("aria-pressed",c.c===sel);
+    cb.addEventListener("click",function(){state.corp[it.id]=(state.corp[it.id]===c.c)?null:c.c;render();});
+    return [cb,won(c.avg),won(c.q)];
+  });
+  d.appendChild(block("법인별 상품 평균 (원)",table(["법인","평균가","물량"],corpRows,selIdx)));
+  if(sel){
+    var mine=it.lots.filter(function(l){return l.c===sel;}).slice(0,8);
+    d.appendChild(block(sel+" 최근 낙찰 내역",table(["시각","산지","등급","수량","낙찰가"],
+      mine.map(function(l){return [fmtTime(l.t),l.o,el("span","grade",l.g),won(l.q),won(l.p)];}))));
+  } else {
+    d.appendChild(el("p","hint","법인 이름을 누르면 그 법인의 최근 낙찰 내역이 나옵니다."));
+  }
+
+  var on=!!state.fav[it.n],f=el("button","fav",on?"★ 관심 품목에서 빼기":"☆ 관심 품목에 담기");
+  f.type="button";f.setAttribute("aria-pressed",on);
+  f.addEventListener("click",function(){if(state.fav[it.n])delete state.fav[it.n];else state.fav[it.n]=1;save("garak-fav",state.fav);render();});
+  d.appendChild(f);
+  return d;
+}
+
+function row(it){
+  var li=el("li","item"+(state.open===it.id?" open":"")),k=dir(it.pct);
+  var b=el("button","head");b.type="button";b.setAttribute("aria-expanded",state.open===it.id);
+  var nm=el("span","name");
+  if(state.fav[it.n])nm.appendChild(el("span","star","★"));
+  nm.appendChild(document.createTextNode(it.n));
+  nm.appendChild(el("span","unit",(it.v?it.v+" · ":"")+it.u));
+  var pr=el("span","price num",won(it.today));pr.appendChild(el("small",null,"원"));
+  var sub=el("span","sub num");
+  sub.appendChild(spark(it.week,64,20,k,false));
+  sub.appendChild(el("span",null,"물량 "+won(it.vol)));
+  var pill=el("span","pill num "+k,pctText(it.pct)+(k==="flat"?"":" ("+(it.diff>0?"+":"−")+won(Math.abs(it.diff))+")"));
+  b.appendChild(nm);b.appendChild(pr);b.appendChild(sub);b.appendChild(pill);
+  b.addEventListener("click",function(){state.open=state.open===it.id?null:it.id;render();});
+  li.appendChild(b);
+  if(state.open===it.id)li.appendChild(detail(it));
+  return li;
+}
+
+function render(){
+  var q=state.q.trim();
+  var rows=DATA.filter(function(it){
+    if(state.cat==="관심"&&!state.fav[it.n])return false;
+    if(state.cat!=="전체"&&state.cat!=="관심"&&it.c!==state.cat)return false;
+    return !q||it.n.indexOf(q)>=0||it.v.indexOf(q)>=0;
+  });
+  var s=state.sort;
+  rows.sort(function(a,b){
+    if(s==="up")return b.pct-a.pct; if(s==="down")return a.pct-b.pct; if(s==="vol")return b.vol-a.vol;
+    return a.n.localeCompare(b.n,"ko")||a.v.localeCompare(b.v,"ko");
+  });
+  $list.textContent="";
+  if(!rows.length){
+    var msg=state.cat==="관심"&&!q?"관심 품목이 아직 없습니다. 품목을 눌러 펼친 뒤 '관심 품목에 담기'를 누르세요.":"조건에 맞는 품목이 없습니다. 검색어나 분류를 바꿔 보세요.";
+    $list.appendChild(el("li","empty",msg));
+  } else rows.forEach(function(it){$list.appendChild(row(it));});
+  Array.prototype.forEach.call(document.querySelectorAll(".chip"),function(c){c.setAttribute("aria-pressed",c.dataset.cat===state.cat);});
+}
+
+function renderSummary(){
+  var up=DATA.filter(function(x){return dir(x.pct)==="up";}).length,
+      dn=DATA.filter(function(x){return dir(x.pct)==="down";}).length,
+      top=DATA.slice().sort(function(a,b){return b.pct-a.pct;})[0],
+      bot=DATA.slice().sort(function(a,b){return a.pct-b.pct;})[0],
+      box=document.getElementById("summary");
+  function tile(k,v,cls,s){var x=el("div","tile");x.appendChild(el("div","k",k));x.appendChild(el("div","v num "+cls,v));x.appendChild(el("div","s num",s));return x;}
+  box.textContent="";
+  box.appendChild(tile("오른 품목 / 내린 품목",up+" / "+dn,"","전체 "+DATA.length+"개 품목"));
+  box.appendChild(tile("가장 많이 오름",top.n+(top.v?" ("+top.v+")":""),"up",pctText(top.pct)));
+  box.appendChild(tile("가장 많이 내림",bot.n+(bot.v?" ("+bot.v+")":""),"down",pctText(bot.pct)));
+}
+
+function showMarket(m){
+  if(curMarket!==m.id){
+    curMarket=m.id;
+    state.q="";state.cat="전체";state.sort="name";state.open=null;state.corp={};
+    document.getElementById("q").value="";document.getElementById("sort").value="name";
+  }
+  DATA=build(m);
+  $home.hidden=true;$mkt.hidden=false;
+  document.title=m.n+" 경락가";
+  document.getElementById("mtitle").textContent=m.n+" 경락가";
+  document.getElementById("date").textContent=dateText;
+  renderSummary();render();
+}
+
+/* ---------- 조작부 연결 ---------- */
+var $chips=document.getElementById("chips");
+CATS.forEach(function(c){
+  var b=el("button","chip",c==="관심"?"★ 관심":c);b.type="button";b.dataset.cat=c;
+  b.addEventListener("click",function(){state.cat=c;render();});
+  $chips.appendChild(b);
+});
+document.getElementById("q").addEventListener("input",function(e){state.q=e.target.value;render();});
+document.getElementById("sort").addEventListener("change",function(e){state.sort=e.target.value;render();});
+document.getElementById("msearch").addEventListener("input",function(e){msearch=e.target.value;renderAll();});
+
+/* ---------- 주소 해시로 화면 전환 ---------- */
+function route(){
+  var id="";
+  try{id=decodeURIComponent((location.hash||"").replace(/^#/,""));}catch(e){}
+  var m=find(id);
+  if(m)showMarket(m);else{curMarket=null;showHome();}
+  try{window.scrollTo(0,0);}catch(e){}
+}
+window.addEventListener("hashchange",route);
+route();
+})();
+</script>
+</body>
+</html>
