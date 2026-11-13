@@ -58,14 +58,17 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 8px}
 .notice b{font-weight:600;white-space:nowrap}
 
 /* 메인 */
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.mcard{display:flex;flex-wrap:wrap;justify-content:space-between;align-content:flex-start;column-gap:8px;row-gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;text-decoration:none;color:inherit;min-height:96px}
-.mcard .mnb{display:flex;flex-direction:column;gap:2px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mcard{display:flex;align-items:stretch;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 0 12px 12px;text-decoration:none;color:inherit;min-height:96px;overflow:hidden}
+.mcard .mnb{display:flex;flex-direction:column;gap:2px;flex:none;padding-right:8px}
+.mcard .ms span{white-space:nowrap}
 .mcard .mn{font-family:var(--display);font-size:22px;line-height:1.15}
 .mcard .mn.long{font-size:17px;line-height:1.35}
 .mcard .mr{font-size:12px;color:var(--muted)}
-.mcard .ms{flex-basis:100%;font-size:13px;display:flex;gap:10px}
-.mcard .mvs{margin-left:auto;text-align:right;font-size:11px;line-height:1.35;padding-top:2px}
+.mcard .ms{margin-top:auto;padding-top:6px;font-size:13px;display:flex;gap:7px}
+.mcard .mvs{flex:1;min-width:0;border-left:1px solid var(--line);padding:0 6px;display:flex;flex-direction:column;justify-content:center;gap:3px;font-size:11px;line-height:1.3;text-align:left}
+.mcard .mvs .mv{display:block}
+.mcard .mkg{display:block;font-weight:600;font-size:12px}
 .mcard .ms.off{color:var(--muted)}
 .up-t{color:var(--up);font-weight:600}.down-t{color:var(--down);font-weight:600}
 .pinhint{margin:0;padding:18px 12px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface);border:1px dashed var(--line);border-radius:14px}
@@ -419,10 +422,12 @@ function kgText(k){return k>=1000?(k/1000).toLocaleString("ko-KR",{maximumFracti
 function volName(x){return x.n+(x.v&&x.v.indexOf(x.n)<0?" ("+x.v+")":"");}
 function moverLines(s,cls,compact){
   var w=el("span",cls);
-  w.appendChild(el("span","mv rk","거래량 상위"));
+  w.appendChild(el("span","mv rk",compact?"거래량":"거래량 상위"));
   (s.vol||[]).forEach(function(x,i){
     var a=el("span","mv");a.appendChild(el("span","rk",(i+1)+(compact?" ":"위 ")));
-    a.appendChild(document.createTextNode(volName(x)+" "+kgText(x.kg)));w.appendChild(a);
+    if(compact){a.appendChild(document.createTextNode(x.n));a.appendChild(el("span","mkg",kgText(x.kg)));}
+    else a.appendChild(document.createTextNode(volName(x)+" "+kgText(x.kg)));
+    w.appendChild(a);
   });
   return w;
 }
@@ -436,12 +441,12 @@ function renderPins(){
   shown.forEach(function(m){
     var s=stats(m),a=el("a","mcard");a.href="#"+m.id;
     var nb=el("span","mnb");nb.appendChild(el("span","mn"+(m.n.length>3?" long":""),m.n));nb.appendChild(el("span","mr",m.r));
-    a.appendChild(nb);
     var st=el("span","ms num"+(s.ok?"":" off"));
-    if(s.ok){st.appendChild(el("span","up-t","▲ "+s.up));st.appendChild(el("span","down-t","▼ "+s.dn));}
+    if(s.ok){st.appendChild(el("span","up-t","▲"+s.up));st.appendChild(el("span","down-t","▼"+s.dn));}
     else st.appendChild(el("span",null,"수집 안 함"));
+    nb.appendChild(st);
+    a.appendChild(nb);
     if(s.ok&&s.vol&&s.vol.length)a.appendChild(moverLines(s,"mvs",true));
-    a.appendChild(st);
     box.appendChild(a);
   });
 }
