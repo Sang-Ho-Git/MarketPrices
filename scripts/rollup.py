@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""보관(archive) 브랜치에서 6개월(KEEP_DAYS=180)이 지난 낙찰 파일을 달마다 압축 파일 하나로 묶어 GitHub 릴리스에 올리고,
-올리기에 성공한 경우에만 archive 브랜치에서 지운다. (올리기에 실패하면 아무것도 지우지 않는다.)
+"""달마다 낙찰 내역을 압축 파일 하나로 묶어 GitHub 릴리스에 올리는 백업과, 오래된 날짜 정리를 한다.
 
-- 한 달이 통째로 기준일(오늘 - KEEP_DAYS)보다 오래됐을 때 그 달을 묶는다. (그래서 실제로는 6~7개월 보관)
-- 릴리스 이름: archive-YYYY-MM (제목 "2026-11월"), 파일 하나: MarketPrices-YYYY-MM.tar.gz (전체 시장)
-- 필요한 환경: ARCHIVE_DIR(archive 브랜치 폴더), gh 명령과 GH_TOKEN
+1) 백업: 한 달이 끝나고 이틀이 지나면(야간 경매는 다음 날 정산되므로) 그 달 전체를
+   MarketPrices-YYYY-MM.tar.gz 하나로 묶어 릴리스 archive-YYYY-MM (제목 "2026-11월") 에 올린다.
+   archive 브랜치와 main 의 data/lots 에 있는 그달 파일을 모두 넣는다. 지우지는 않는다.
+2) 정리: 180일(KEEP_DAYS)이 지난 달은, 릴리스에 파일이 올라가 있는 것을 확인한 뒤에만 archive 브랜치에서 지운다.
+   (릴리스 확인이 안 되면 아무것도 지우지 않는다.)
+- 필요한 환경: ARCHIVE_DIR(archive 브랜치 폴더), gh 명령과 GH_TOKEN, 저장소 루트에서 실행(data/lots 읽기)
 """
 import datetime
 import json
@@ -18,6 +20,7 @@ import tempfile
 KST = datetime.timezone(datetime.timedelta(hours=9))
 KEEP_DAYS = int(os.environ.get("KEEP_DAYS", "180"))
 ARCHIVE_DIR = os.environ.get("ARCHIVE_DIR", "").strip()
+MAIN_LOTS = os.environ.get("MAIN_LOTS", "data/lots")
 
 
 def log(*a):
@@ -47,53 +50,100 @@ def month_end(ym):
     return nxt - datetime.timedelta(days=1)
 
 
-def main(upload=gh_upload):
-    if not ARCHIVE_DIR or not os.path.isdir(os.path.join(ARCHIVE_DIR, "lots")):
-        log("보관할 낙찰 파일이 없습니다.")
-        return 0
+def gh_has_asset(tag, name):
+    r = subprocess.run(["gh", "release", "view", tag, "--json", "assets"], capture_output=True, text=True)
+    if r.returncode != 0:
+        return False
+    try:
+        return any(a.get("name") == name for a in json.loads(r.stdout).get("assets", []))
+    except ValueError:
+        return False
+
+
+def collect(root):
+    """root/<시장>/<날짜> 폴더를 훑어 {YYYY-MM: {시장: {날짜: 경로}}} 로 돌려준다."""
+    out = {}
+    if not os.path.isdir(root):
+        return out
+    for mid in sorted(os.listdir(root)):
+        mdir = os.path.join(root, mid)
+        if not os.path.isdir(mdir):
+            continue
+        for d in sorted(os.listdir(mdir)):
+            out.setdefault(d[:7], {}).setdefault(mid, {})[d] = os.path.join(mdir, d)
+    return out
+
+
+def corp_names(mid):
+    names = {}
+    for path in (os.path.join(ARCHIVE_DIR, "index", mid + ".json"), os.path.join("data", mid + ".json")):
+        if os.path.exists(path):
+            try:
+                names.update(json.load(open(path, encoding="utf-8")).get("corps", {}))
+            except ValueError:
+                pass
+    return names
+
+
+def backup_month(ym, parts, upload):
+    tag, name = "archive-" + ym, "MarketPrices-%s.tar.gz" % ym
+    work = tempfile.mkdtemp()
+    tmp = os.path.join(work, name)
+    with tarfile.open(tmp, "w:gz") as tar:
+        for mid, days in parts.items():
+            for d, path in sorted(days.items()):
+                tar.add(path, arcname="%s/lots/%s/%s" % (ym, mid, d))
+            names = corp_names(mid)
+            p = os.path.join(work, mid + ".json")
+            json.dump({"dates": sorted(days), "corps": names}, open(p, "w", encoding="utf-8"),
+                      ensure_ascii=False, separators=(",", ":"))
+            tar.add(p, arcname="%s/index/%s.json" % (ym, mid))
+    log("%s월 백업: 시장 %d곳, %.1fMB 올리는 중" % (ym, len(parts), os.path.getsize(tmp) / 1e6))
+    ok = upload(tag, tmp)
+    shutil.rmtree(work, ignore_errors=True)
+    return ok
+
+
+def main(upload=gh_upload, has_asset=gh_has_asset):
     today = datetime.datetime.now(KST).date()
-    cutoff = today - datetime.timedelta(days=KEEP_DAYS)
-    lots = os.path.join(ARCHIVE_DIR, "lots")
-    months = {}                       # {YYYY-MM: {시장: [날짜,...]}}
-    for mid in sorted(os.listdir(lots)):
-        for d in sorted(os.listdir(os.path.join(lots, mid))):
-            months.setdefault(d[:7], {}).setdefault(mid, []).append(d)
-    done = 0
-    for ym, markets in sorted(months.items()):
-        if month_end(ym) > cutoff:
-            continue                  # 아직 기준일보다 새로운 날이 섞여 있다
-        tag, name = "archive-" + ym, "MarketPrices-%s.tar.gz" % ym
-        work = tempfile.mkdtemp()
-        tmp = os.path.join(work, name)
-        with tarfile.open(tmp, "w:gz") as tar:
-            for mid, days in markets.items():
-                for d in days:
-                    tar.add(os.path.join(lots, mid, d), arcname="%s/lots/%s/%s" % (ym, mid, d))
+    backed = pruned = 0
+    # 1) 지난 달 백업
+    months = {}
+    for src in (collect(os.path.join(ARCHIVE_DIR, "lots")) if ARCHIVE_DIR else {}, collect(MAIN_LOTS)):
+        for ym, mk in src.items():
+            for mid, days in mk.items():
+                months.setdefault(ym, {}).setdefault(mid, {}).update(days)
+    for ym, parts in sorted(months.items()):
+        if month_end(ym) + datetime.timedelta(days=2) > today:
+            continue                      # 아직 한 달이 끝나지 않았거나 마지막 날 정산 전이다
+        if has_asset("archive-" + ym, "MarketPrices-%s.tar.gz" % ym):
+            continue                      # 이미 올렸다
+        if backup_month(ym, parts, upload):
+            backed += 1
+        else:
+            log("  올리기에 실패했습니다. 다음 갱신 때 다시 시도합니다.")
+    # 2) 오래된 날짜 정리: 릴리스에 있는 것을 확인한 뒤에만 archive 브랜치에서 지운다
+    if ARCHIVE_DIR and os.path.isdir(os.path.join(ARCHIVE_DIR, "lots")):
+        cutoff = today - datetime.timedelta(days=KEEP_DAYS)
+        lots = os.path.join(ARCHIVE_DIR, "lots")
+        for ym, mk in sorted(collect(lots).items()):
+            if month_end(ym) > cutoff:
+                continue
+            if not has_asset("archive-" + ym, "MarketPrices-%s.tar.gz" % ym):
+                log("%s월: 릴리스에 백업이 없어 지우지 않습니다." % ym)
+                continue
+            for mid, days in mk.items():
+                for d, path in days.items():
+                    shutil.rmtree(path, ignore_errors=True)
                 idx = os.path.join(ARCHIVE_DIR, "index", mid + ".json")
                 if os.path.exists(idx):
                     j = json.load(open(idx, encoding="utf-8"))
-                    part = {"dates": {d: j.get("dates", {}).get(d, []) for d in days}, "corps": j.get("corps", {})}
-                    p = os.path.join(work, mid + ".json")
-                    json.dump(part, open(p, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-                    tar.add(p, arcname="%s/index/%s.json" % (ym, mid))
-        log("%s월: 시장 %d곳, %.1fMB 올리는 중" % (ym, len(markets), os.path.getsize(tmp) / 1e6))
-        if not upload(tag, tmp):
-            log("  올리기에 실패해서 지우지 않습니다.")
-            shutil.rmtree(work, ignore_errors=True)
-            continue
-        shutil.rmtree(work, ignore_errors=True)
-        for mid, days in markets.items():
-            for d in days:
-                shutil.rmtree(os.path.join(lots, mid, d), ignore_errors=True)
-            idx = os.path.join(ARCHIVE_DIR, "index", mid + ".json")
-            if os.path.exists(idx):
-                j = json.load(open(idx, encoding="utf-8"))
-                for d in days:
-                    j.get("dates", {}).pop(d, None)
-                with open(idx, "w", encoding="utf-8") as fh:
-                    json.dump(j, fh, ensure_ascii=False, separators=(",", ":"))
-        done += 1
-    log("묶어서 올린 달: %d건" % done)
+                    for d in days:
+                        j.get("dates", {}).pop(d, None)
+                    with open(idx, "w", encoding="utf-8") as fh:
+                        json.dump(j, fh, ensure_ascii=False, separators=(",", ":"))
+            pruned += 1
+    log("백업한 달: %d건, 정리한 달: %d건" % (backed, pruned))
     return 0
 
 
