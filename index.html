@@ -414,6 +414,7 @@ function stats(m){
 function volName(x){return x.n+(x.v&&x.v.indexOf(x.n)<0?" ("+x.v+")":"");}
 function moverLines(s,cls){
   var w=el("span",cls);
+  w.appendChild(el("span","mv rk","거래량 상위"));
   (s.vol||[]).forEach(function(x,i){
     var a=el("span","mv");a.appendChild(el("span","rk",(i+1)+"위 "));
     a.appendChild(document.createTextNode(volName(x)+" "+won(x.vol)));w.appendChild(a);
