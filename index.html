@@ -93,6 +93,7 @@ input[type=search]{flex:1}
 select{flex:none}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{flex:none;font:inherit;font-size:14px;height:34px;padding:0 12px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip.more{border-style:dashed;color:var(--muted)}
 .chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -684,11 +685,20 @@ function buildChips(){
   cats=["전체","관심"].concat(cats);
   if(cats.indexOf(state.cat)<0)state.cat="전체";
   $chips.textContent="";
+  var MAIN=["전체","관심","서류","두류","조미채소류"],hidden=cats.filter(function(c){return MAIN.indexOf(c)<0;});
+  if(hidden.indexOf(state.cat)>=0)state.more=true;
   cats.forEach(function(c){
+    if(!state.more&&hidden.indexOf(c)>=0)return;
     var b=el("button","chip",c==="관심"?"★ 관심":c);b.type="button";b.dataset.cat=c;
     b.addEventListener("click",function(){state.cat=c;state.limit=SHOW;render();});
     $chips.appendChild(b);
   });
+  if(hidden.length){
+    var m=el("button","chip more",state.more?"접기 ▲":"더보기 ▼ ("+hidden.length+")");m.type="button";
+    m.setAttribute("aria-expanded",!!state.more);
+    m.addEventListener("click",function(){state.more=!state.more;buildChips();render();});
+    $chips.appendChild(m);
+  }
 }
 
 function renderSummary(){
