@@ -408,16 +408,18 @@ function stats(m){
   if(REAL){var i=realInfo(m.id);return i?{up:i.up,dn:i.dn,items:i.items,vol:i.vol,ok:true}:{ok:false};}
   var data=build(m),up=0,dn=0;
   data.forEach(function(x){var k=dir(x.pct);if(k==="up")up++;else if(k==="down")dn++;});
-  var vol=data.slice().sort(function(a,b){return b.vol-a.vol;}).slice(0,2).map(function(x){return {n:x.n,v:x.v,vol:x.vol};});
+  function kgOf(x){var m=/^([\d.]+)\s*kg/.exec(x.u||"");return m?x.vol*parseFloat(m[1]):0;}
+  var vol=data.slice().sort(function(a,b){return kgOf(b)-kgOf(a);}).slice(0,2).map(function(x){return {n:x.n,v:x.v,kg:Math.round(kgOf(x))};});
   return {up:up,dn:dn,items:data.length,vol:vol,ok:true};
 }
+function kgText(k){return k>=1000?(k/1000).toLocaleString("ko-KR",{maximumFractionDigits:1})+"톤":won(k)+"kg";}
 function volName(x){return x.n+(x.v&&x.v.indexOf(x.n)<0?" ("+x.v+")":"");}
 function moverLines(s,cls){
   var w=el("span",cls);
   w.appendChild(el("span","mv rk","거래량 상위"));
   (s.vol||[]).forEach(function(x,i){
     var a=el("span","mv");a.appendChild(el("span","rk",(i+1)+"위 "));
-    a.appendChild(document.createTextNode(volName(x)+" "+won(x.vol)));w.appendChild(a);
+    a.appendChild(document.createTextNode(volName(x)+" "+kgText(x.kg)));w.appendChild(a);
   });
   return w;
 }

@@ -11,6 +11,7 @@ GitHub Actions 에서 정해진 시간마다 실행된다. 인증키는 환경�
   data/<시장id>.json                   화면이 처음 읽는 시장별 시세 (품목, 최근 추세, 날짜별 법인 평균)
   data/index.json                      수집한 시장 목록과 요약
 """
+import re
 import datetime
 import json
 import os
@@ -309,8 +310,11 @@ def summarize(market):
                 best = rec
             if worst is None or pct < worst["pct"]:
                 worst = rec
-    ranked = sorted(market["items"], key=lambda x: x.get("vol") or 0, reverse=True)[:2]
-    topvol = [{"n": x["n"], "v": x.get("v", ""), "vol": x.get("vol") or 0} for x in ranked]
+    def kg_of(x):
+        m = re.match(r"^([\d.]+)\s*kg", x.get("u", ""))
+        return (x.get("vol") or 0) * float(m.group(1)) if m else 0
+    ranked = sorted(market["items"], key=kg_of, reverse=True)[:2]
+    topvol = [{"n": x["n"], "v": x.get("v", ""), "kg": round(kg_of(x))} for x in ranked]
     return up, dn, best, worst, topvol
 
 
