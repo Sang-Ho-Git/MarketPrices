@@ -9,7 +9,7 @@
 - `scripts/markets.json` 수집할 시장(`active`)과 시장 이름 매칭 글자(`match`)를 적습니다.
 - `.github/workflows/update.yml` 매일 한국시간 07:00, 19:00 에 `fetch.py` 를 실행하고 바뀐 데이터를 저장합니다.
 - `archive` 브랜치 14일이 지난 낙찰 파일을 옮겨 두는 곳입니다. 화면에서 오래된 날짜를 고르면 여기서 불러옵니다.
-- 3개월이 지난 달은 `scripts/rollup.py` 가 월별 압축 파일(`lots-시장-YYYY-MM.tar.gz`)로 묶어 저장소의 Releases(`archive-YYYY-MM`)에 올립니다. 올리기에 성공한 경우에만 `archive` 브랜치에서 지웁니다. 내 컴퓨터에는 Releases 페이지에서 내려받아 보관하세요.
+- 6개월(180일)이 지난 달은 `scripts/rollup.py` 가 달마다 압축 파일 하나(`MarketPrices-2026-11.tar.gz`, 전체 시장 포함)로 묶어 저장소의 Releases(`archive-2026-11`)에 올립니다. 올리기에 성공한 경우에만 `archive` 브랜치에서 지웁니다. 내 컴퓨터에는 Releases 페이지에서 내려받아 보관하세요.
 
 ## 처음 한 번
 1. Settings → Secrets and variables → Actions 에 `DATA_GO_KR_KEY` (인증키) 등록
