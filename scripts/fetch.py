@@ -293,7 +293,9 @@ def build_market(days_data):
 
 
 def summarize(market):
+    """오른/내린 품목 수와, 가장 많이 오른/내린 품목."""
     up = dn = 0
+    best = worst = None
     for it in market["items"]:
         w = it["week"]
         if len(w) >= 2 and w[-2]:
@@ -302,7 +304,12 @@ def summarize(market):
                 up += 1
             elif pct < -0.05:
                 dn += 1
-    return up, dn
+            rec = {"n": it["n"], "v": it.get("v", ""), "pct": round(pct, 1)}
+            if best is None or pct > best["pct"]:
+                best = rec
+            if worst is None or pct < worst["pct"]:
+                worst = rec
+    return up, dn, best, worst
 
 
 # ---------------------------------------------------------------- 메인
@@ -402,9 +409,10 @@ def main():
             continue
         market.update({"id": mid, "name": m.get("label") or name, "code": code, "generated": now.isoformat(timespec="seconds")})
         write_json(os.path.join(DATA, mid + ".json"), market)
-        up, dn = summarize(market)
+        up, dn, best, worst = summarize(market)
         index.append({"id": mid, "name": market["name"], "date": market["date"],
-                      "items": len(market["items"]), "up": up, "dn": dn})
+                      "items": len(market["items"]), "up": up, "dn": dn,
+                      "top": best, "bot": worst})
         # 시장 하나가 끝날 때마다 저장해서, 중간에 멈춰도 끝낸 시장은 남게 한다.
         write_json(os.path.join(DATA, "index.json"),
                    {"generated": now.isoformat(timespec="seconds"), "markets": index})

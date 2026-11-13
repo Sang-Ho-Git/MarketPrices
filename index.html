@@ -72,8 +72,13 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 8px}
 .mlist{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .mrow{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
 .mrow:last-child{border-bottom:0}
-.mrow a{flex:1;display:flex;flex-direction:column;justify-content:center;padding:10px 14px;min-height:52px;text-decoration:none;color:inherit;min-width:0}
+.mrow a{flex:1;display:flex;flex-direction:row;align-items:center;gap:10px;padding:10px 14px;min-height:52px;text-decoration:none;color:inherit;min-width:0}
+.mrow .ml{display:flex;flex-direction:column;flex:none}
 .mrow .nm{font-weight:600}
+.mrow .cnt{font-size:12px;font-weight:400;color:var(--muted)}
+.mx{flex:1;margin-left:auto;display:flex;flex-direction:column;gap:2px;font-size:12px;min-width:0;text-align:right}
+.mv{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvs{display:flex;flex-direction:column;gap:2px;font-size:12px;padding-top:6px;min-width:0}
 .mrow .sb{font-size:12px;color:var(--muted)}
 .pinbtn{flex:none;width:52px;border:0;border-left:1px solid var(--line);background:none;font:inherit;font-size:20px;color:var(--muted);cursor:pointer}
 .pinbtn[aria-pressed=true]{color:var(--accent)}
@@ -399,10 +404,22 @@ function block(title,node){var s=el("section");s.appendChild(el("h3",null,title)
 var $home=document.getElementById("home"),$mkt=document.getElementById("mkt");
 
 function stats(m){
-  if(REAL){var i=realInfo(m.id);return i?{up:i.up,dn:i.dn,ok:true}:{ok:false};}
-  var data=build(m),up=0,dn=0;
-  data.forEach(function(x){var k=dir(x.pct);if(k==="up")up++;else if(k==="down")dn++;});
-  return {up:up,dn:dn,ok:true};
+  if(REAL){var i=realInfo(m.id);return i?{up:i.up,dn:i.dn,items:i.items,top:i.top,bot:i.bot,ok:true}:{ok:false};}
+  var data=build(m),up=0,dn=0,top=null,bot=null;
+  data.forEach(function(x){var k=dir(x.pct);if(k==="up")up++;else if(k==="down")dn++;
+    if(!top||x.pct>top.pct)top={n:x.n,v:x.v,pct:x.pct};if(!bot||x.pct<bot.pct)bot={n:x.n,v:x.v,pct:x.pct};});
+  return {up:up,dn:dn,items:data.length,top:top,bot:bot,ok:true};
+}
+function mover(x){
+  if(!x)return "";
+  var nm=x.n+(x.v&&x.v.indexOf(x.n)<0?" ("+x.v+")":"");
+  return nm+" "+Math.abs(x.pct).toFixed(1)+"%";
+}
+function moverLines(s,cls){
+  var w=el("span",cls);
+  if(s.top){var a=el("span","mv");a.appendChild(el("span","up-t","▲ "));a.appendChild(document.createTextNode(mover(s.top)));w.appendChild(a);}
+  if(s.bot){var b=el("span","mv");b.appendChild(el("span","down-t","▼ "));b.appendChild(document.createTextNode(mover(s.bot)));w.appendChild(b);}
+  return w;
 }
 
 function renderPins(){
@@ -419,6 +436,7 @@ function renderPins(){
     if(s.ok){st.appendChild(el("span","up-t","▲ "+s.up));st.appendChild(el("span","down-t","▼ "+s.dn));}
     else st.appendChild(el("span",null,"수집 안 함"));
     a.appendChild(st);
+    if(s.ok&&s.top)a.appendChild(moverLines(s,"mvs"));
     box.appendChild(a);
   });
 }
@@ -437,9 +455,13 @@ function renderAll(){
     list.forEach(function(m){
       var on=pins.indexOf(m.id)>=0,row=el("div","mrow");
       var a=el("a");a.href="#"+m.id;
-      a.appendChild(el("span","nm",m.n));
-      var s=stats(m);
-      a.appendChild(el("span","sb num",s.ok?"오른 "+s.up+" · 내린 "+s.dn:"수집 안 함"));
+      var s=stats(m),lf=el("span","ml");
+      var nmE=el("span","nm",m.n);
+      if(s.ok&&s.items)nmE.appendChild(el("small","cnt"," "+s.items+"개"));
+      lf.appendChild(nmE);
+      lf.appendChild(el("span","sb num",s.ok?"오른 "+s.up+" · 내린 "+s.dn:"수집 안 함"));
+      a.appendChild(lf);
+      if(s.ok&&s.top)a.appendChild(moverLines(s,"mx"));
       var b=el("button","pinbtn",on?"★":"☆");b.type="button";b.setAttribute("aria-pressed",on);
       b.setAttribute("aria-label",m.n+(on?" 고정 해제":" 자주 보는 시장에 고정"));
       b.addEventListener("click",function(){
