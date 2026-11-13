@@ -142,8 +142,8 @@ tr.sel td{background:var(--accent-soft)}
 .calday[aria-pressed=true]{background:var(--accent);color:var(--surface);opacity:1}
 /* 낙찰 내역: 15줄 높이까지 보이고 그 아래는 스크롤 */
 .scrollbox{max-height:calc(15 * 33px + 34px);overflow:auto;border:1px solid var(--line);border-radius:10px;padding:0 6px}
-.scrollbox td{height:33px;padding-top:0;padding-bottom:0}
-.scrollbox thead th{position:sticky;top:0;background:var(--surface);z-index:1;height:34px}
+.scrollbox td{font-size:16px;height:33px;padding-top:0;padding-bottom:0}
+.scrollbox thead th{font-size:14px;position:sticky;top:0;background:var(--surface);z-index:1;height:34px}
 .grade{display:inline-block;min-width:34px;text-align:center;border-radius:6px;padding:1px 6px;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:12px}
 .fav{align-self:flex-start;font:inherit;font-size:14px;height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .fav[aria-pressed=true]{border-color:var(--accent);color:var(--accent);font-weight:600}
@@ -470,6 +470,7 @@ function showHome(){
 var $list=document.getElementById("list"),$chips=document.getElementById("chips");
 
 function pad2(n){return (n<10?"0":"")+n;}
+function favKey(it){return it.n+"|"+it.v+"|"+it.u;}
 function corpName(code){return CORPNAMES[code]||code;}
 function selOf(it){
   var s=state.sel[it.id];
@@ -593,7 +594,7 @@ function detail(it){
     cb.addEventListener("click",function(){s.corp=(s.corp===z[0])?null:z[0];render();});
     return [cb,z[1]==null?"–":won(z[1]),z[2]==null?"–":won(z[2])];
   });
-  d.appendChild(block("법인별 평균 낙찰가 ("+mdOf(s.d)+", 원)",corpRows.length
+  d.appendChild(block("법인별 평균 낙찰가 ("+mdOf(s.d)+")",corpRows.length
     ?table(["법인","평균가","물량"],corpRows,selIdx)
     :el("p","hint","이 날짜의 법인별 정보가 아직 없습니다. 다음 갱신 뒤에 나옵니다.")));
 
@@ -620,9 +621,9 @@ function detail(it){
     d.appendChild(el("p","hint","법인 이름을 누르면 그 날 그 법인의 낙찰 내역이 나옵니다."));
   }
 
-  var on=!!state.fav[it.n],f=el("button","fav",on?"★ 관심 품목에서 빼기":"☆ 관심 품목에 담기");
+  var fk=favKey(it),on=!!state.fav[fk],f=el("button","fav",on?"★ 관심 품목에서 빼기":"☆ 관심 품목에 담기");
   f.type="button";f.setAttribute("aria-pressed",on);
-  f.addEventListener("click",function(){if(state.fav[it.n])delete state.fav[it.n];else state.fav[it.n]=1;save("garak-fav",state.fav);render();});
+  f.addEventListener("click",function(){if(state.fav[fk])delete state.fav[fk];else state.fav[fk]=1;save("garak-fav",state.fav);render();});
   d.appendChild(f);
   return d;
 }
@@ -631,7 +632,7 @@ function row(it){
   var li=el("li","item"+(state.open===it.id?" open":"")),k=dir(it.pct);
   var b=el("button","head");b.type="button";b.setAttribute("aria-expanded",state.open===it.id);
   var nm=el("span","name");
-  if(state.fav[it.n])nm.appendChild(el("span","star","★"));
+  if(state.fav[favKey(it)])nm.appendChild(el("span","star","★"));
   nm.appendChild(document.createTextNode(it.n));
   nm.appendChild(el("span","unit",(it.v?it.v+" · ":"")+it.u));
   var pr=el("span","price num",won(it.today));pr.appendChild(el("small",null,"원"));
@@ -649,7 +650,7 @@ function row(it){
 function render(){
   var q=state.q.trim();
   var rows=DATA.filter(function(it){
-    if(state.cat==="관심"&&!state.fav[it.n])return false;
+    if(state.cat==="관심"&&!state.fav[favKey(it)])return false;
     if(state.cat!=="전체"&&state.cat!=="관심"&&it.c!==state.cat)return false;
     return !q||it.n.indexOf(q)>=0||it.v.indexOf(q)>=0;
   });
