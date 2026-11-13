@@ -102,6 +102,10 @@ select{flex:none}
 .item.open{border-color:var(--accent)}
 .head{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:12px 12px 12px 14px;cursor:pointer;width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left}
 .name{font-weight:600;font-size:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dtitle{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.dtitle strong{font-size:17px}
+.dsub{font-size:14px}
+.dcat{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:1px 8px}
 .unit{font-size:12px;color:var(--muted);font-weight:400}
 .price{font-family:var(--display);font-size:22px;text-align:right;line-height:1.1}
 .price small{font-family:var(--body);font-size:12px;color:var(--muted);margin-left:2px}
@@ -575,6 +579,11 @@ function calendar(it,s){
 
 function detail(it){
   var d=el("div","detail"),k=dir(it.pct);
+  var ti=el("div","dtitle");
+  ti.appendChild(el("strong",null,it.n));
+  ti.appendChild(el("span","dsub",(it.v?it.v+" · ":"")+it.u));
+  if(it.c)ti.appendChild(el("span","dcat",catLabel(it.c)));
+  d.appendChild(ti);
   var wk=el("div","week");wk.appendChild(spark(it.week,300,64,k,true));
   var lo=Math.min.apply(null,it.week),hi=Math.max.apply(null,it.week);
   var rg=el("div","rng num");rg.appendChild(el("div",null,"최고 "+won(hi)));rg.appendChild(el("div",null,"최저 "+won(lo)));
