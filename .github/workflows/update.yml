@@ -58,6 +58,13 @@ jobs:
             git push
           fi
 
+      - name: 3개월 지난 보관분을 월별 파일로 묶어 릴리스에 올리기
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHIVE_DIR: ${{ github.workspace }}/archive-branch
+        run: python3 scripts/rollup.py
+
       - name: 오래된 데이터 보관 (archive)
         if: always()
         working-directory: archive-branch

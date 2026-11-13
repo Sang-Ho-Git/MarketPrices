@@ -1,35 +1,168 @@
 {
-  "_설명": "active 에 시장 id 를 넣으면 그 시장의 데이터를 수집한다. match 는 API 의 도매시장 이름에 들어 있는 글자이고, code 를 적으면 이름 대신 그 코드를 쓴다.",
-  "active": ["garak", "gangseo", "anyang", "incheon-samsan", "incheon-namchon"],
-  "markets": [
-    {"id": "garak", "match": "가락"},
-    {"id": "gangseo", "match": "강서", "code": "110008"},
-    {"id": "anyang", "match": "안양"},
-    {"id": "ansan", "match": "안산"},
-    {"id": "suwon", "match": "수원"},
-    {"id": "guri", "match": "구리"},
-    {"id": "incheon-samsan", "match": "삼산"},
-    {"id": "incheon-namchon", "match": "남촌"},
-    {"id": "busan-eomgung", "match": "엄궁"},
-    {"id": "busan-banyeo", "match": "반여"},
-    {"id": "daegu-bukbu", "match": "대구북부"},
-    {"id": "daejeon-ojeong", "match": "오정"},
-    {"id": "daejeon-noeun", "match": "노은"},
-    {"id": "gwangju-gakhwa", "match": "각화"},
-    {"id": "gwangju-seobu", "match": "광주서부"},
-    {"id": "ulsan", "match": "울산"},
-    {"id": "gangneung", "match": "강릉"},
-    {"id": "chuncheon", "match": "춘천"},
-    {"id": "wonju", "match": "원주"},
-    {"id": "cheongju", "match": "청주"},
-    {"id": "cheonan", "match": "천안"},
-    {"id": "jeonju", "match": "전주"},
-    {"id": "iksan", "match": "익산"},
-    {"id": "jeongeup", "match": "정읍"},
-    {"id": "suncheon", "match": "순천"},
-    {"id": "pohang", "match": "포항"},
-    {"id": "gumi", "match": "구미"},
-    {"id": "changwon-paryong", "match": "팔용"},
-    {"id": "jinju", "match": "진주"}
-  ]
+ "_설명": "active 에 시장 id 를 넣으면 그 시장의 데이터를 수집한다. match 는 API 의 도매시장 이름에 들어 있는 글자이고, code 를 적으면 이름 대신 그 코드를 쓴다.",
+ "active": [
+  "garak",
+  "gangseo",
+  "anyang",
+  "incheon-samsan",
+  "incheon-namchon",
+  "ansan",
+  "suwon",
+  "guri",
+  "busan-eomgung",
+  "busan-banyeo",
+  "daegu-bukbu",
+  "daejeon-ojeong",
+  "daejeon-noeun",
+  "gwangju-gakhwa",
+  "gwangju-seobu",
+  "ulsan",
+  "gangneung",
+  "chuncheon",
+  "wonju",
+  "cheongju",
+  "cheonan",
+  "jeonju",
+  "iksan",
+  "jeongeup",
+  "suncheon",
+  "pohang",
+  "gumi",
+  "changwon-paryong",
+  "jinju",
+  "chungju",
+  "andong",
+  "changwon-naeseo"
+ ],
+ "markets": [
+  {
+   "id": "garak",
+   "match": "가락"
+  },
+  {
+   "id": "gangseo",
+   "match": "강서",
+   "code": "110008"
+  },
+  {
+   "id": "anyang",
+   "match": "안양"
+  },
+  {
+   "id": "ansan",
+   "match": "안산"
+  },
+  {
+   "id": "suwon",
+   "match": "수원"
+  },
+  {
+   "id": "guri",
+   "match": "구리"
+  },
+  {
+   "id": "incheon-samsan",
+   "match": "삼산"
+  },
+  {
+   "id": "incheon-namchon",
+   "match": "남촌"
+  },
+  {
+   "id": "busan-eomgung",
+   "match": "엄궁"
+  },
+  {
+   "id": "busan-banyeo",
+   "match": "반여"
+  },
+  {
+   "id": "daegu-bukbu",
+   "match": "대구북부"
+  },
+  {
+   "id": "daejeon-ojeong",
+   "match": "오정"
+  },
+  {
+   "id": "daejeon-noeun",
+   "match": "노은"
+  },
+  {
+   "id": "gwangju-gakhwa",
+   "match": "각화"
+  },
+  {
+   "id": "gwangju-seobu",
+   "match": "광주서부"
+  },
+  {
+   "id": "ulsan",
+   "match": "울산"
+  },
+  {
+   "id": "gangneung",
+   "match": "강릉"
+  },
+  {
+   "id": "chuncheon",
+   "match": "춘천"
+  },
+  {
+   "id": "wonju",
+   "match": "원주"
+  },
+  {
+   "id": "cheongju",
+   "match": "청주"
+  },
+  {
+   "id": "cheonan",
+   "match": "천안"
+  },
+  {
+   "id": "jeonju",
+   "match": "전주"
+  },
+  {
+   "id": "iksan",
+   "match": "익산"
+  },
+  {
+   "id": "jeongeup",
+   "match": "정읍"
+  },
+  {
+   "id": "suncheon",
+   "match": "순천"
+  },
+  {
+   "id": "pohang",
+   "match": "포항"
+  },
+  {
+   "id": "gumi",
+   "match": "구미"
+  },
+  {
+   "id": "changwon-paryong",
+   "match": "팔용"
+  },
+  {
+   "id": "jinju",
+   "match": "진주"
+  },
+  {
+   "id": "chungju",
+   "match": "충주"
+  },
+  {
+   "id": "andong",
+   "match": "안동"
+  },
+  {
+   "id": "changwon-naeseo",
+   "match": "내서"
+  }
+ ]
 }
