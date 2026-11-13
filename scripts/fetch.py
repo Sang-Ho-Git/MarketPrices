@@ -229,9 +229,11 @@ def agg(rows):
         it["q"] += q
         cc = corp_code(r)
         names.setdefault(cc, (r.get("corp_nm") or "").strip() or cc)
-        c = it["corps"].setdefault(cc, [0.0, 0.0])
+        c = it["corps"].setdefault(cc, [0.0, 0.0, p, p])   # [금액합, 수량합, 최고가, 최저가]
         c[0] += p * q
         c[1] += q
+        c[2] = max(c[2], p)
+        c[3] = min(c[3], p)
     return items, names
 
 
@@ -282,7 +284,10 @@ def build_market(days_data):
                 if d in graph:
                     week.append(whole(x["sp"] / x["q"]))
                     wd.append(d)
-                cd[d] = sorted(([c, whole(s / q), clean(q)] for c, (s, q) in x["corps"].items()),
+                cd[d] = sorted(([c, whole(v[0] / v[1]), clean(v[1]),
+                                 whole(v[2]) if len(v) > 3 else None,
+                                 whole(v[3]) if len(v) > 3 else None]
+                                for c, v in x["corps"].items()),
                                key=lambda z: z[2], reverse=True)
         out.append({"n": it["n"], "v": it["v"], "u": it["u"], "c": it["c"],
                     "week": week, "wdays": wd, "vol": whole(it["q"]), "cd": cd})

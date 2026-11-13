@@ -622,10 +622,10 @@ function detail(it){
     if(z[0]===s.corp)selIdx=i;
     var cb=el("button","corpbtn",corpName(z[0]));cb.type="button";cb.setAttribute("aria-pressed",z[0]===s.corp);
     cb.addEventListener("click",function(){s.corp=(s.corp===z[0])?null:z[0];render();});
-    return [cb,z[1]==null?"–":won(z[1]),z[2]==null?"–":won(z[2])];
+    return [cb,z[1]==null?"–":won(z[1]),z[2]==null?"–":won(z[2]),z[3]==null?"–":won(z[3]),z[4]==null?"–":won(z[4])];
   });
   d.appendChild(block("법인별 평균 낙찰가 ("+mdOf(s.d)+")",corpRows.length
-    ?table(["법인","평균가","물량"],corpRows,selIdx)
+    ?table(["법인","평균가","물량","최고가","최저가"],corpRows,selIdx)
     :el("p","hint","이 날짜의 법인별 정보가 아직 없습니다. 다음 갱신 뒤에 나옵니다.")));
 
   if(s.corp){
@@ -668,7 +668,8 @@ function row(it){
   var pr=el("span","price num",won(it.today));pr.appendChild(el("small",null,"원"));
   var sub=el("span","sub num");
   sub.appendChild(spark(it.week,64,20,k,false));
-  sub.appendChild(el("span",null,"물량 "+won(it.vol)));
+  var kgm=/^([\d.]+)\s*kg/.exec(it.u||"");
+  sub.appendChild(el("span",null,"물량 "+won(it.vol)+(kgm?" · "+won(Math.round(it.vol*parseFloat(kgm[1])))+"kg":"")));
   var pill=el("span","pill num "+k,pctText(it.pct)+(k==="flat"?"":" ("+(it.diff>0?"+":"−")+won(Math.abs(it.diff))+")"));
   b.appendChild(nm);b.appendChild(pr);b.appendChild(sub);b.appendChild(pill);
   b.addEventListener("click",function(){state.open=state.open===it.id?null:it.id;render();});
