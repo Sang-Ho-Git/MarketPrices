@@ -582,7 +582,7 @@ function detail(it){
   var ti=el("div","dtitle");
   ti.appendChild(el("strong",null,it.n));
   ti.appendChild(el("span","dsub",(it.v?it.v+" · ":"")+it.u));
-  if(it.c)ti.appendChild(el("span","dcat",catLabel(it.c)));
+  if(it.c)ti.appendChild(el("span","dcat",catTag(it.c)));
   d.appendChild(ti);
   var wk=el("div","week");wk.appendChild(spark(it.week,300,64,k,true));
   var lo=Math.min.apply(null,it.week),hi=Math.max.apply(null,it.week);
@@ -683,8 +683,9 @@ function render(){
   Array.prototype.forEach.call(document.querySelectorAll(".chip"),function(c){c.setAttribute("aria-pressed",c.dataset.cat===state.cat);});
 }
 
-var CATNAME={"엽경채류":"잎·줄기채소","과실류":"과일","조미채소류":"양념채소","양채류":"서양채소","버섯류":"버섯","과일과채류":"과일형 채소","과채류":"열매채소","근채류":"뿌리채소","산채류":"산나물","농림가공":"가공식품","서류":"감자·고구마","두류":"콩류","신선 해조류":"해조류","수실류":"견과류","특용작물류":"특용작물","수산가공":"수산 가공품","약용작물류":"약재","건제품":"건조식품","관엽식물류":"화초·관엽식물"};
+var CATNAME={"엽경채류":"잎·줄기채소","과실류":"과일","조미채소류":"양념채소","양채류":"서양채소","버섯류":"버섯","과일과채류":"과일형 채소","과채류":"열매채소","근채류":"뿌리채소","산채류":"산나물","농림가공":"가공식품","서류":"서류(감자·고구마 등)","두류":"콩류","신선 해조류":"해조류","수실류":"견과류","특용작물류":"특용작물","수산가공":"수산 가공품","약용작물류":"약재","건제품":"건조식품","관엽식물류":"화초·관엽식물"};
 function catLabel(c){return CATNAME[c]||c;}
+function catTag(c){return c==="서류"?c:catLabel(c);}
 function buildChips(){
   var cnt={};
   DATA.forEach(function(x){cnt[x.c]=(cnt[x.c]||0)+1;});
