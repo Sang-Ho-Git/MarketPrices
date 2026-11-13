@@ -77,6 +77,7 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 8px}
 .mrow .nm{font-weight:600}
 .mrow .cnt{font-size:12px;font-weight:400;color:var(--muted)}
 .mx{flex:1;margin-left:auto;display:flex;flex-direction:column;gap:2px;font-size:12px;min-width:0;text-align:right}
+.rk{color:var(--muted)}
 .mv{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mvs{display:flex;flex-direction:column;gap:2px;font-size:12px;padding-top:6px;min-width:0}
 .mrow .sb{font-size:12px;color:var(--muted)}
@@ -404,21 +405,19 @@ function block(title,node){var s=el("section");s.appendChild(el("h3",null,title)
 var $home=document.getElementById("home"),$mkt=document.getElementById("mkt");
 
 function stats(m){
-  if(REAL){var i=realInfo(m.id);return i?{up:i.up,dn:i.dn,items:i.items,top:i.top,bot:i.bot,ok:true}:{ok:false};}
-  var data=build(m),up=0,dn=0,top=null,bot=null;
-  data.forEach(function(x){var k=dir(x.pct);if(k==="up")up++;else if(k==="down")dn++;
-    if(!top||x.pct>top.pct)top={n:x.n,v:x.v,pct:x.pct};if(!bot||x.pct<bot.pct)bot={n:x.n,v:x.v,pct:x.pct};});
-  return {up:up,dn:dn,items:data.length,top:top,bot:bot,ok:true};
+  if(REAL){var i=realInfo(m.id);return i?{up:i.up,dn:i.dn,items:i.items,vol:i.vol,ok:true}:{ok:false};}
+  var data=build(m),up=0,dn=0;
+  data.forEach(function(x){var k=dir(x.pct);if(k==="up")up++;else if(k==="down")dn++;});
+  var vol=data.slice().sort(function(a,b){return b.vol-a.vol;}).slice(0,2).map(function(x){return {n:x.n,v:x.v,vol:x.vol};});
+  return {up:up,dn:dn,items:data.length,vol:vol,ok:true};
 }
-function mover(x){
-  if(!x)return "";
-  var nm=x.n+(x.v&&x.v.indexOf(x.n)<0?" ("+x.v+")":"");
-  return nm+" "+Math.abs(x.pct).toFixed(1)+"%";
-}
+function volName(x){return x.n+(x.v&&x.v.indexOf(x.n)<0?" ("+x.v+")":"");}
 function moverLines(s,cls){
   var w=el("span",cls);
-  if(s.top){var a=el("span","mv");a.appendChild(el("span","up-t","▲ "));a.appendChild(document.createTextNode(mover(s.top)));w.appendChild(a);}
-  if(s.bot){var b=el("span","mv");b.appendChild(el("span","down-t","▼ "));b.appendChild(document.createTextNode(mover(s.bot)));w.appendChild(b);}
+  (s.vol||[]).forEach(function(x,i){
+    var a=el("span","mv");a.appendChild(el("span","rk",(i+1)+"위 "));
+    a.appendChild(document.createTextNode(volName(x)+" "+won(x.vol)));w.appendChild(a);
+  });
   return w;
 }
 
@@ -436,7 +435,7 @@ function renderPins(){
     if(s.ok){st.appendChild(el("span","up-t","▲ "+s.up));st.appendChild(el("span","down-t","▼ "+s.dn));}
     else st.appendChild(el("span",null,"수집 안 함"));
     a.appendChild(st);
-    if(s.ok&&s.top)a.appendChild(moverLines(s,"mvs"));
+    if(s.ok&&s.vol&&s.vol.length)a.appendChild(moverLines(s,"mvs"));
     box.appendChild(a);
   });
 }
@@ -461,7 +460,7 @@ function renderAll(){
       lf.appendChild(nmE);
       lf.appendChild(el("span","sb num",s.ok?"오른 "+s.up+" · 내린 "+s.dn:"수집 안 함"));
       a.appendChild(lf);
-      if(s.ok&&s.top)a.appendChild(moverLines(s,"mx"));
+      if(s.ok&&s.vol&&s.vol.length)a.appendChild(moverLines(s,"mx"));
       var b=el("button","pinbtn",on?"★":"☆");b.type="button";b.setAttribute("aria-pressed",on);
       b.setAttribute("aria-label",m.n+(on?" 고정 해제":" 자주 보는 시장에 고정"));
       b.addEventListener("click",function(){

@@ -309,7 +309,9 @@ def summarize(market):
                 best = rec
             if worst is None or pct < worst["pct"]:
                 worst = rec
-    return up, dn, best, worst
+    ranked = sorted(market["items"], key=lambda x: x.get("vol") or 0, reverse=True)[:2]
+    topvol = [{"n": x["n"], "v": x.get("v", ""), "vol": x.get("vol") or 0} for x in ranked]
+    return up, dn, best, worst, topvol
 
 
 # ---------------------------------------------------------------- 메인
@@ -409,10 +411,10 @@ def main():
             continue
         market.update({"id": mid, "name": m.get("label") or name, "code": code, "generated": now.isoformat(timespec="seconds")})
         write_json(os.path.join(DATA, mid + ".json"), market)
-        up, dn, best, worst = summarize(market)
+        up, dn, best, worst, topvol = summarize(market)
         index.append({"id": mid, "name": market["name"], "date": market["date"],
                       "items": len(market["items"]), "up": up, "dn": dn,
-                      "top": best, "bot": worst})
+                      "top": best, "bot": worst, "vol": topvol})
         # 시장 하나가 끝날 때마다 저장해서, 중간에 멈춰도 끝낸 시장은 남게 한다.
         write_json(os.path.join(DATA, "index.json"),
                    {"generated": now.isoformat(timespec="seconds"), "markets": index})
