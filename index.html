@@ -154,6 +154,9 @@ tr.sel td{background:var(--accent-soft)}
 .calday[aria-pressed=true]{background:var(--accent);color:var(--surface);opacity:1}
 /* 낙찰 내역: 15줄 높이까지 보이고 그 아래는 스크롤 */
 .scrollbox{max-height:calc(15 * 33px + 34px);overflow:auto;border:1px solid var(--line);border-radius:10px;padding:0 6px}
+.org{display:inline-block;vertical-align:middle}
+.org.cut{max-width:6.8em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.scrollbox td:nth-child(2),.scrollbox th:nth-child(2){text-align:left}
 .scrollbox td{font-size:16px;height:33px;padding-top:0;padding-bottom:0}
 .scrollbox thead th{font-size:14px;position:sticky;top:0;background:var(--surface);z-index:1;height:34px}
 .grade{display:inline-block;min-width:34px;text-align:center;border-radius:6px;padding:1px 6px;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:12px}
@@ -557,6 +560,17 @@ function sampleLots(it,date,code){
   out.sort(function(a,b){return b.m-a.m;});
   return out.map(function(x){return {t:fmtTime(x.m),o:x.o,q:x.q,p:x.p};});
 }
+/* 산지 이름이 길면 줄여서 보여주고, 누르면 전체가 펼쳐진다 */
+function orgCell(o){
+  var sp=el("span","org",o||"");sp.title=o||"";
+  if((o||"").length>10){
+    sp.classList.add("cut");sp.setAttribute("role","button");sp.setAttribute("tabindex","0");
+    var tg=function(){sp.classList.toggle("cut");};
+    sp.addEventListener("click",tg);
+    sp.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tg();}});
+  }
+  return sp;
+}
 function lotRows(it,date,code){
   if(!REAL)return {status:"ok",rows:sampleLots(it,date,code)};
   var e=lotsFile(date,code,!(it.cd&&it.cd[date]));
@@ -647,7 +661,7 @@ function detail(it){
       var box=el("section");
       box.appendChild(el("h3",null,title));
       box.appendChild(el("p","hint num",res.rows.length+"건 · 물량 "+won(tq)+" · 평균 "+won(Math.round(sp/tq))+"원"));
-      var tb=table(["시각","산지","수량","낙찰가"],res.rows.slice(0,1000).map(function(r){return [r.t,r.o,won(r.q),won(r.p)];}));
+      var tb=table(["시각","산지","수량","낙찰가"],res.rows.slice(0,1000).map(function(r){return [r.t,orgCell(r.o),won(r.q),won(r.p)];}));
       tb.className="tbl scrollbox";
       box.appendChild(tb);
       d.appendChild(box);
