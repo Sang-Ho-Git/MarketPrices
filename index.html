@@ -79,7 +79,6 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 8px}
 .pinbtn[aria-pressed=true]{color:var(--accent)}
 
 /* 시장 화면 */
-.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
 .tile .k{font-size:12px;color:var(--muted)}
 .tile .v{font-family:var(--display);font-size:22px;line-height:1.2;overflow-wrap:anywhere}
@@ -155,7 +154,6 @@ tr.sel td{background:var(--accent-soft)}
 .empty{padding:28px 12px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:14px}
 footer{margin-top:20px;color:var(--muted);font-size:12px;display:flex;flex-direction:column;gap:4px}
 footer a{color:var(--accent)}
-@media (max-width:360px){.summary{grid-template-columns:1fr 1fr}.summary .tile:last-child{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -180,7 +178,6 @@ footer a{color:var(--accent)}
       <div class="notice" id="mnotice"><b id="mnb">예시 데이터</b><span id="mnt">지금 보이는 가격과 물량은 화면 확인용으로 만든 숫자입니다. 실제 경매 결과가 아닙니다.</span></div>
     </header>
 
-    <section class="summary" id="summary" aria-label="오늘 요약"></section>
 
     <div class="controls">
       <div class="row">
@@ -713,18 +710,6 @@ function buildChips(){
   }
 }
 
-function renderSummary(){
-  var box=document.getElementById("summary");box.textContent="";
-  if(!DATA.length)return;
-  var up=DATA.filter(function(x){return dir(x.pct)==="up";}).length,
-      dn=DATA.filter(function(x){return dir(x.pct)==="down";}).length,
-      top=DATA.slice().sort(function(a,b){return b.pct-a.pct;})[0],
-      bot=DATA.slice().sort(function(a,b){return a.pct-b.pct;})[0];
-  function tile(k,v,cls,s){var x=el("div","tile");x.appendChild(el("div","k",k));x.appendChild(el("div","v num "+cls,v));x.appendChild(el("div","s num",s));return x;}
-  box.appendChild(tile("오른 품목 / 내린 품목",up+" / "+dn,"","전체 "+DATA.length+"개 품목"));
-  box.appendChild(tile("가장 많이 오름",top.n+(top.v?" ("+top.v+")":""),"up",pctText(top.pct)));
-  box.appendChild(tile("가장 많이 내림",bot.n+(bot.v?" ("+bot.v+")":""),"down",pctText(bot.pct)));
-}
 
 function showMarket(m,my){
   if(curMarket!==m.id){
@@ -737,10 +722,10 @@ function showMarket(m,my){
   document.getElementById("mtitle").textContent=m.n+" 경락가";
   function finish(dateStr){
     document.getElementById("date").textContent=dateStr;
-    buildChips();renderSummary();render();
+    buildChips();render();
   }
   function empty(msg){
-    DATA=[];$chips.textContent="";document.getElementById("summary").textContent="";
+    DATA=[];$chips.textContent="";
     $list.textContent="";$list.appendChild(el("li","empty",msg));
   }
   if(!REAL){
