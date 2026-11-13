@@ -62,6 +62,7 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:20px 0 8px}
 .mcard{display:grid;grid-template-columns:1fr 1fr;align-items:center;column-gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;text-decoration:none;color:inherit;min-height:96px}
 .mcard .mnb{display:flex;flex-direction:column;gap:2px;min-width:0}
 .mcard .mn{font-family:var(--display);font-size:24px;line-height:1.15}
+.mcard .mhd{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
 .mcard .mr{font-size:12px;color:var(--muted)}
 .mcard .ms{padding-top:6px;font-size:13px;display:flex;gap:10px}
 .mcard .mvs{min-width:0;display:flex;flex-direction:column;gap:2px;font-size:12px;text-align:right}
@@ -436,7 +437,7 @@ function renderPins(){
   }
   shown.forEach(function(m){
     var s=stats(m),a=el("a","mcard");a.href="#"+m.id;
-    var nb=el("span","mnb");nb.appendChild(el("span","mn",m.n));nb.appendChild(el("span","mr",m.r));
+    var nb=el("span","mnb");var hd=el("span","mhd");hd.appendChild(el("span","mn",m.n));hd.appendChild(el("span","mr",m.r));nb.appendChild(hd);
     var st=el("span","ms num"+(s.ok?"":" off"));
     if(s.ok){st.appendChild(el("span","up-t","▲ "+s.up));st.appendChild(el("span","down-t","▼ "+s.dn));}
     else st.appendChild(el("span",null,"수집 안 함"));
