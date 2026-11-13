@@ -674,6 +674,8 @@ function render(){
   Array.prototype.forEach.call(document.querySelectorAll(".chip"),function(c){c.setAttribute("aria-pressed",c.dataset.cat===state.cat);});
 }
 
+var CATNAME={"엽경채류":"잎·줄기채소","과실류":"과일","조미채소류":"양념채소","양채류":"서양채소","버섯류":"버섯","과일과채류":"딸기·수박·참외","과채류":"열매채소","근채류":"뿌리채소","산채류":"산나물","농림가공":"가공식품","서류":"감자·고구마","두류":"콩류","신선 해조류":"해조류","수실류":"견과류","특용작물류":"특용작물","수산가공":"수산 가공품","약용작물류":"약재","건제품":"건조식품","관엽식물류":"화초·관엽식물"};
+function catLabel(c){return CATNAME[c]||c;}
 function buildChips(){
   var cnt={};
   DATA.forEach(function(x){cnt[x.c]=(cnt[x.c]||0)+1;});
@@ -689,7 +691,7 @@ function buildChips(){
   if(hidden.indexOf(state.cat)>=0)state.more=true;
   cats.forEach(function(c){
     if(!state.more&&hidden.indexOf(c)>=0)return;
-    var b=el("button","chip",c==="관심"?"★ 관심":c);b.type="button";b.dataset.cat=c;
+    var b=el("button","chip",c==="관심"?"★ 관심":catLabel(c));b.type="button";b.dataset.cat=c;
     b.addEventListener("click",function(){state.cat=c;state.limit=SHOW;render();});
     $chips.appendChild(b);
   });
